@@ -1,0 +1,10 @@
+node_modules
+.venv
+.vscode
+serviceAccount.json
+.env
+firebaseTest.js
+client.js
+*-lock.json
+
+*.log
