@@ -51,7 +51,7 @@ const handleSendTo = (socket) => (data) => {
   const sendTime = new Date().toLocaleString();
 
   if (clientId) {
-    socket.to(clientId).emit("message", data);
+    socket.to(clientId).emit("chatMessage", data);
     storeMessage(data.to, data.from, data.msg, sendTime);
     winston.info(`Sent message to ${data.from}: ${data.msg}`);
   } else if (users.includes(data.to)) {
@@ -116,6 +116,16 @@ const handleSaveContacts = (socket) => (data) => {
   logger.info("data: ", data);
 
   if (users.includes(data.from)) {
+    // if the contact is not in the users list
+    if (!users.includes(data.contact.username)) {
+      socket.emit("message", {
+        from: "Server",
+        msg: `User ${data.contact.username} not found`,
+      });
+      winston.error(`Error: User ${data.contact.username}, ${socket.id} not found`);
+      return;
+    }
+    // if the contact is in the users list
     database.ref("/contacts/" + data.from).push({
       name: data.contact.name,
       username: data.contact.username,
@@ -140,6 +150,19 @@ const storeMessage = (user, from, msg, time) => {
   });
 };
 
+const fetchUsers = async () => {
+  try {
+    const usersSnapshot = await database.ref("/contacts").once("value");
+    const usersData = usersSnapshot.val();
+    const users = Object.keys(usersData);
+    return users;
+  } catch (error) {
+    logger.error("Error retrieving users:", error);
+    return [];
+  }
+};
+
+
 // get all messages from a chatId
 const getMessages = async (chatId) => {
   const messagesSnapshot = await database
@@ -151,9 +174,17 @@ const getMessages = async (chatId) => {
 };
 
 // Socket.io event handlers
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   logger.info("A user connected");
 
+  // Fetch and store the list of users
+  const fetchedUsers = await fetchUsers();
+  // set all users variable 
+  users = fetchedUsers;
+  // console.log("users: ", users);
+  // socket.emit("users", users);
+
+  // Rest of the event handlers
   socket.on("setUsername", handleSetUsername(socket));
   socket.on("disconnect", () => {
     clientMap.delete(socket.username);
@@ -165,6 +196,7 @@ io.on("connection", (socket) => {
   socket.on("sendTo", handleSendTo(socket));
   socket.on("connectTo", handleConnectTo(socket));
 });
+
 
 server.listen(3000, () => {
   logger.info("Server listening on port 3000");

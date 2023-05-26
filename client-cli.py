@@ -20,6 +20,7 @@ contacts = []
 isContactSet = False
 
 isConnectedToContact = 0
+contactConnectedTo = ""
 
 ########## SOCKET.IO CODE ##########
 @sio.on("connect")
@@ -58,10 +59,25 @@ def on_response_connect_to(data):
     global isConnectedToContact
     if data["status"] == "ok":
         isConnectedToContact = 1
+        contactConnectedTo = data["to"]
     else:
         isConnectedToContact = data["status"]
 
     
+@sio.on("message")
+def on_message(data):
+    # print(data)
+    # print(type(data))
+    console.print(f"[blue]{data['from']}[/blue]: {data['msg']}")
+
+# When a user sends a message to another user we need to display it if the user is connected to the other user
+@sio.on("chatMessage")
+def on_chat_message(data):
+    global contactConnectedTo
+    if data["from"] == contactConnectedTo:
+        console.print(f"[blue]{data['from']}[/blue]: {data['msg']}")
+    else:
+        console.print(f"[blue]{data['from']}[/blue] sent you a message. Type 'connect {data['from']}' to connect to them")
 
 
 
@@ -92,7 +108,7 @@ def getContacts():
 def show_contacts(console, contacts):
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Name", style="dim", width=12)
-    table.add_column("Email", justify="right")
+    table.add_column("Username", justify="right")
     # table.add_column("Phone", justify="right")
     for contact in contacts.values():
         # print(contact)
@@ -106,12 +122,16 @@ def save_contacts():
     save_contacts = Prompt.ask("Do you want to save the contacts?", choices=["Yes", "No"])
     if save_contacts == "Yes":
         # ask username and name and save to server
-        new_contact_name = Prompt.ask("Enter the name of the contact")
-        new_contact_username = Prompt.ask("Enter the username of the contact")
+        save_new_contact()
+        console.print("Contacts saved")
 
-        new_contact = {"name": new_contact_name, "username": new_contact_username}
+def save_new_contact():
+    new_contact_name = Prompt.ask("Enter the name of the contact")
+    new_contact_username = Prompt.ask("Enter the username of the contact")
+
+    new_contact = {"name": new_contact_name, "username": new_contact_username}
         # send to server
-        sio.emit("addContact", {"from": username, "contact": new_contact})
+    sio.emit("addContact", {"from": username, "contact": new_contact})
 
 
 def main():
@@ -130,7 +150,16 @@ def main():
     while not isContactSet:
         time.sleep(0.1)
 
-    print(contacts)
+    # if the user has no contacts, ask him to add some
+    while contacts is None or len(contacts) == 0 :
+        isContactSet = False
+        console.print("You have no contacts")
+        save_new_contact()
+        getContacts()
+        while not isContactSet:
+            time.sleep(0.1)
+            
+    # print(contacts)
     input("Press enter to continue")
 
     # use rich table to show the list of contacts
@@ -164,11 +193,7 @@ def main():
                     break
                 
                 sio.emit("sendTo", {"to": contact_selected, "msg": your_message, "from": username})
-                @sio.on("message")
-                def on_message(data):
-                    print(data)
-                    print(type(data))
-                    console.print(f"[blue]{data['from']}[/blue]: {data['msg']}")
+
                     
 
 if __name__ == "__main__":
