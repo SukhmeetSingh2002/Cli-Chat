@@ -2,8 +2,9 @@ const express = require("express");
 const http = require("http");
 const socketIO = require("socket.io");
 const winston = require("winston");
-const database = require("./firebaseTest");
+const database = require("./firebaseTest").database;
 const { generateChatId } = require("./utils/generateChatId");
+const auth = require("./firebaseTest").auth;
 
 const app = express();
 const server = http.createServer(app);
@@ -23,25 +24,91 @@ let clientMap = new Map();
 let users = [];
 
 // Event handlers
-const handleSetUsername = (socket) => (data) => {
-  logger.info(`Setting username: ${data}`);
-  if (users.includes(data)) {
-    socket.emit(
-      "userExists",
-      `${data} username is taken! Try some other username.`
-    );
-  } else {
-    users.push(data);
-    socket.username = data;
+const handleRegisterUser = async (socket, data) => {
+  // Extract the necessary data
+  const { username, email, password } = data;
+
+  logger.info(`Registering new user: ${username}`);
+  logger.info(`Email: ${email}`);
+  logger.info(`Password: ${password}`);
+
+  try {
+    // Check if the username already exists
+    if (users.includes(username)) {
+      throw new Error(`${username} username is taken! Try some other username.`);
+    }
+
+    // Create a new user with the provided email and password
+    const userRecord = await auth.createUser({
+      email: email,
+      password: password,
+      displayName: username,
+    });
+
+    // Update the user list and socket properties
+    users.push(username);
+    socket.username = username;
     clientMap.set(socket.username, socket.id);
-    socket.emit("userSet", { username: data });
+
+    socket.emit("userSet", { username: username });
+
+    logger.info("Successfully created new user:", userRecord.uid);
+  } catch (error) {
+    logger.error("Error creating user:", error);
+
+    socket.emit("userExists", `Error: ${error.message}! Try again.`);
   }
+
+};
+
+const handleLogin = async (socket, data) => {
+  // Extract the necessary data
+  const { username, email, password } = data;
+
+  logger.info(`Logging in with username: ${username}`);
+  logger.info(`Logging in with email: ${email}`);
+  logger.info(`Password: ${password}`);
+
+  if (!users.includes(username)) {
+    socket.emit("userExists", `Error: ${username} does not exist! Try again.`);
+    return;
+  }
+
+  try {
+    // Generate the email sign-in link
+    const actionCodeSettings = {
+      url: "http://localhost:5500",
+      handleCodeInApp: false,
+    };
+    const link = await auth.generateSignInWithEmailLink(email, actionCodeSettings);
+    logger.info("Generated sign-in link:"+ link);
+
+    // Send the email to the user with the link
+
+    socket.emit("userSet", { username: email });
+
+    logger.info("User logged in successfully.");
+  } catch (error) {
+    logger.error("Error logging in:"+ error);
+
+    socket.emit("userExists", `Error: ${error.message}! Try again.`);
+  }
+};
+
+// Handle the "setUsername" event
+const handleSetUsername = (socket) => (data) => {
+  // Determine the action based on the provided data
+  if (data.action === "register") {
+    handleRegisterUser(socket, data);
+  } else if (data.action === "login") {
+    handleLogin(socket, data);
+  }
+
   logger.info("All users: ", users);
   clientMap.forEach((value, key) => {
     logger.info(`${key} = ${value}`);
   });
 };
-
 const handleSendTo = (socket) => (data) => {
   logger.info("sendTo event");
   logger.info("to: ", data.to);
@@ -122,7 +189,9 @@ const handleSaveContacts = (socket) => (data) => {
         from: "Server",
         msg: `User ${data.contact.username} not found`,
       });
-      winston.error(`Error: User ${data.contact.username}, ${socket.id} not found`);
+      winston.error(
+        `Error: User ${data.contact.username}, ${socket.id} not found`
+      );
       return;
     }
     // if the contact is in the users list
@@ -152,16 +221,25 @@ const storeMessage = (user, from, msg, time) => {
 
 const fetchUsers = async () => {
   try {
-    const usersSnapshot = await database.ref("/contacts").once("value");
-    const usersData = usersSnapshot.val();
-    const users = Object.keys(usersData);
+    // const usersSnapshot = await database.ref("/contacts").once("value");
+    // const usersData = usersSnapshot.val();
+    const userRecords = await auth.listUsers();
+
+    const usersData = userRecords.users.map((userRecord) => ({
+      uid: userRecord.uid,
+      email: userRecord.email,
+      displayName: userRecord.displayName,
+    }));
+    
+    const users = usersData.map((user) => user.displayName);
+    // console.log("userData: ", usersData);
+    // console.log("users: ", users);
     return users;
   } catch (error) {
     logger.error("Error retrieving users:", error);
     return [];
   }
 };
-
 
 // get all messages from a chatId
 const getMessages = async (chatId) => {
@@ -179,7 +257,7 @@ io.on("connection", async (socket) => {
 
   // Fetch and store the list of users
   const fetchedUsers = await fetchUsers();
-  // set all users variable 
+  // set all users variable
   users = fetchedUsers;
   // console.log("users: ", users);
   // socket.emit("users", users);
@@ -196,7 +274,6 @@ io.on("connection", async (socket) => {
   socket.on("sendTo", handleSendTo(socket));
   socket.on("connectTo", handleConnectTo(socket));
 });
-
 
 server.listen(3000, () => {
   logger.info("Server listening on port 3000");
