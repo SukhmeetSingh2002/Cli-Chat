@@ -1,3 +1,4 @@
+from rich.traceback import install
 import time
 import socketio
 
@@ -8,13 +9,14 @@ from rich.table import Table
 
 from enum import Enum
 
+
 class UsernameState(Enum):
-    UNSET = 0 
+    UNSET = 0
     WAITING = 1
     SET = 2
     ERROR = 3
 
-from rich.traceback import install
+
 install(show_locals=True)
 
 # Create a console object to print to the terminal
@@ -31,15 +33,19 @@ isConnectedToContact = 0
 contactConnectedTo = ""
 
 ########## SOCKET.IO CODE ##########
+
+
 @sio.on("connect")
 def on_connect():
     console.print("[green]Connected to server[/green]")
+
 
 @sio.on("userExists")
 def on_user_exists(error):
     global isUsernameSet
     isUsernameSet = UsernameState.ERROR
     console.print(f"[red]Error: {error}[/red]")
+
 
 @sio.on("userSet")
 def on_user_set(data):
@@ -48,12 +54,13 @@ def on_user_set(data):
     console.print(f"[green]Username set to {data}[/green]")
 
 
-
 @sio.on("disconnect")
 def on_disconnect():
     console.print("[red]Disconnected from server[/red]")
 
 # get the list of contacts
+
+
 @sio.on("contacts")
 def on_contacts(data):
     # store the list of contacts
@@ -63,6 +70,8 @@ def on_contacts(data):
     isContactSet = True
 
 # connect to a contact
+
+
 @sio.on("responseConnectTo")
 def on_response_connect_to(data):
     global isConnectedToContact
@@ -72,7 +81,7 @@ def on_response_connect_to(data):
     else:
         isConnectedToContact = data["status"]
 
-    
+
 @sio.on("message")
 def on_message(data):
     # print(data)
@@ -80,14 +89,16 @@ def on_message(data):
     console.print(f"[blue]{data['from']}[/blue]: {data['msg']}")
 
 # When a user sends a message to another user we need to display it if the user is connected to the other user
+
+
 @sio.on("chatMessage")
 def on_chat_message(data):
     global contactConnectedTo
     if data["from"] == contactConnectedTo:
         console.print(f"[blue]{data['from']}[/blue]: {data['msg']}")
     else:
-        console.print(f"[blue]{data['from']}[/blue] sent you a message. Type 'connect {data['from']}' to connect to them")
-
+        console.print(
+            f"[blue]{data['from']}[/blue] sent you a message. Type 'connect {data['from']}' to connect to them")
 
 
 ########## MAIN CODE ##########
@@ -99,25 +110,23 @@ def register_new_user(sio):
     username = Prompt.ask("Enter a username")
     print(f"Your username is: {username}")
 
-
-    # ask valid email 
+    # ask valid email
     email = Prompt.ask("Enter a valid email")
     print(f"Your email is: {email}")
-
-
 
     # ask password
     password = Prompt.ask("Enter a password", password=True)
     print(f"Your password is: {password}")
 
-
     # Send the username to the server
     isUsernameSet = UsernameState.WAITING
-    sio.emit("setUsername", {"username": username, "password": password, "email": email, "action": "register"})
+    sio.emit("setUsername", {
+             "username": username, "password": password, "email": email, "action": "register"})
 
     while isUsernameSet == UsernameState.WAITING:
         time.sleep(0.1)
     return username
+
 
 def login_user(sio):
     global username
@@ -127,12 +136,12 @@ def login_user(sio):
     password = Prompt.ask("Enter your password", password=True)
 
     isUsernameSet = UsernameState.WAITING
-    sio.emit("setUsername", {"email": email, "password": password , "action": "login" , "username": username})
+    sio.emit("setUsername", {
+             "email": email, "password": password, "action": "login", "username": username})
 
     while isUsernameSet == UsernameState.WAITING:
         time.sleep(0.1)
     return username
-
 
 
 def getContacts():
@@ -153,28 +162,33 @@ def show_contacts(console, contacts):
 
     console.print(table)
 
+
 def save_contacts():
     # ask the user if he wants to save the contacts
-    save_contacts = Prompt.ask("Do you want to save the contacts?", choices=["Yes", "No"])
+    save_contacts = Prompt.ask(
+        "Do you want to save the contacts?", choices=["Yes", "No"])
     if save_contacts == "Yes":
         # ask username and name and save to server
         save_new_contact()
         console.print("Contacts saved")
+
 
 def save_new_contact():
     new_contact_name = Prompt.ask("Enter the name of the contact")
     new_contact_username = Prompt.ask("Enter the username of the contact")
 
     new_contact = {"name": new_contact_name, "username": new_contact_username}
-        # send to server
+    # send to server
     sio.emit("addContact", {"from": username, "contact": new_contact})
+
 
 def send_message():
     global contactConnectedTo
     global isConnectedToContact
     # ask the user to ask for a contact using his rich prompt
     # contackts is a list of dictionaries
-    contact_selected = Prompt.ask("Enter the name of the contact you want to send a message to", choices=[contact["name"] for contact in contacts.values()])
+    contact_selected = Prompt.ask("Enter the name of the contact you want to send a message to", choices=[
+                                  contact["name"] for contact in contacts.values()])
 
     # try to connect to the contact
     sio.emit("connectTo", {"to": contact_selected, "from": username})
@@ -190,17 +204,18 @@ def send_message():
         # print a message to the user
         isConnectedToContact = 0
         console.print(f"[green]Connected to {contact_selected}[/green]")
-        console.print(f"[green]Type your message and press enter to send it[/green]")
-        console.print(f"[green]Type 'exit' to disconnect from {contact_selected}[/green]")
+        console.print(
+            f"[green]Type your message and press enter to send it[/green]")
+        console.print(
+            f"[green]Type 'exit' to disconnect from {contact_selected}[/green]")
         while True:
             # Read input from the user
             your_message = input("You:")
             if your_message == "exit":
                 break
 
-            sio.emit("sendTo", {"to": contact_selected, "msg": your_message, "from": username})
-
-            
+            sio.emit("sendTo", {"to": contact_selected,
+                     "msg": your_message, "from": username})
 
 
 def main():
@@ -216,7 +231,8 @@ def main():
         console.print("[bold]1[/bold]. Register new user")
         console.print("[bold]2[/bold]. Login")
 
-        action = Prompt.ask("Enter the number corresponding to your choice:", choices=["1", "2"] , default="2")
+        action = Prompt.ask("Enter the number corresponding to your choice:", choices=[
+                            "1", "2"], default="2")
 
         if action == "1":
             username = register_new_user(sio)
@@ -224,7 +240,7 @@ def main():
             username = login_user(sio)
         else:
             console.print("Invalid action. Please try again.")
-            
+
     save_contacts()
 
     # show the user a list of his contacts
@@ -233,21 +249,22 @@ def main():
         time.sleep(0.1)
 
     # if the user has no contacts, ask him to add some
-    while contacts is None or len(contacts) == 0 :
+    while contacts is None or len(contacts) == 0:
         isContactSet = False
         console.print("You have no contacts")
         save_new_contact()
         getContacts()
         while not isContactSet:
             time.sleep(0.1)
-            
+
     # print(contacts)
     input("Press enter to continue")
 
     while True:
         # ask what the user wants to do
         options = ["Show contacts", "Add contact", "Send message", "Exit"]
-        selected_option = Prompt.ask("Please select an option:", choices=options)
+        selected_option = Prompt.ask(
+            "Please select an option:", choices=options)
         if selected_option == "Show contacts":
             show_contacts(console, contacts)
         elif selected_option == "Add contact":
@@ -260,15 +277,9 @@ def main():
             console.print("Invalid option")
 
 
-                    
-
 if __name__ == "__main__":
     # Connect to the server
     sio.connect("http://localhost:3000")
     main()
     # options = ["Option 1", "Option 2", "Option 3"]
     # selected_option = Prompt.ask("Please select an option:", choices=options)
-
-
-
-

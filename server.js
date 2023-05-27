@@ -35,7 +35,9 @@ const handleRegisterUser = async (socket, data) => {
   try {
     // Check if the username already exists
     if (users.includes(username)) {
-      throw new Error(`${username} username is taken! Try some other username.`);
+      throw new Error(
+        `${username} username is taken! Try some other username.`
+      );
     }
 
     // Create a new user with the provided email and password
@@ -58,7 +60,6 @@ const handleRegisterUser = async (socket, data) => {
 
     socket.emit("userExists", `Error: ${error.message}! Try again.`);
   }
-
 };
 
 const handleLogin = async (socket, data) => {
@@ -80,8 +81,11 @@ const handleLogin = async (socket, data) => {
       url: "http://localhost:5500",
       handleCodeInApp: false,
     };
-    const link = await auth.generateSignInWithEmailLink(email, actionCodeSettings);
-    logger.info("Generated sign-in link:"+ link);
+    const link = await auth.generateSignInWithEmailLink(
+      email,
+      actionCodeSettings
+    );
+    logger.info("Generated sign-in link:" + link);
 
     // Send the email to the user with the link
 
@@ -89,7 +93,7 @@ const handleLogin = async (socket, data) => {
 
     logger.info("User logged in successfully.");
   } catch (error) {
-    logger.error("Error logging in:"+ error);
+    logger.error("Error logging in:" + error);
 
     socket.emit("userExists", `Error: ${error.message}! Try again.`);
   }
@@ -230,7 +234,7 @@ const fetchUsers = async () => {
       email: userRecord.email,
       displayName: userRecord.displayName,
     }));
-    
+
     const users = usersData.map((user) => user.displayName);
     // console.log("userData: ", usersData);
     // console.log("users: ", users);
