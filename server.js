@@ -89,7 +89,12 @@ const handleLogin = async (socket, data) => {
 
     // Send the email to the user with the link
 
-    socket.emit("userSet", { username: email });
+    socket.emit("userSet", { username: username });
+
+    // Update the user list and socket properties
+    socket.username = username;
+    clientMap.set(socket.username, socket.id);
+    
 
     logger.info("User logged in successfully.");
   } catch (error) {
@@ -108,10 +113,10 @@ const handleSetUsername = (socket) => (data) => {
     handleLogin(socket, data);
   }
 
-  logger.info("All users: ", users);
-  clientMap.forEach((value, key) => {
-    logger.info(`${key} = ${value}`);
-  });
+  // logger.info("All users:==================== "+users, users);
+  // clientMap.forEach((value, key) => {
+  //   logger.info(`${key} ======================= ${value}`);
+  // });
 };
 const handleSendTo = (socket) => (data) => {
   logger.info("sendTo event");

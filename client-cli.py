@@ -75,6 +75,7 @@ def on_contacts(data):
 @sio.on("responseConnectTo")
 def on_response_connect_to(data):
     global isConnectedToContact
+    global contactConnectedTo
     if data["status"] == "ok":
         isConnectedToContact = 1
         contactConnectedTo = data["to"]
@@ -86,7 +87,7 @@ def on_response_connect_to(data):
 def on_message(data):
     # print(data)
     # print(type(data))
-    console.print(f"[blue]{data['from']}[/blue]: {data['msg']}")
+    console.print(f"\n[blue]{data['from']}[/blue]: {data['msg']}")
 
 # When a user sends a message to another user we need to display it if the user is connected to the other user
 
@@ -95,10 +96,10 @@ def on_message(data):
 def on_chat_message(data):
     global contactConnectedTo
     if data["from"] == contactConnectedTo:
-        console.print(f"[blue]{data['from']}[/blue]: {data['msg']}")
+        console.print(f"\n[blue]{data['from']}[/blue]: {data['msg']}")
     else:
         console.print(
-            f"[blue]{data['from']}[/blue] sent you a message. Type 'connect {data['from']}' to connect to them")
+            f"\n[blue]{data['from']}[/blue] sent you a message. Type 'connect {data['from']}' to connect to them")
 
 
 ########## MAIN CODE ##########
@@ -275,6 +276,10 @@ def main():
             break
         else:
             console.print("Invalid option")
+
+    # Disconnect from the server
+    sio.disconnect()
+
 
 
 if __name__ == "__main__":
