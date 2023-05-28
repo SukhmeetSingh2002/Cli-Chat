@@ -7,6 +7,9 @@ from rich.markdown import Markdown
 from rich.prompt import Prompt
 from rich.table import Table
 
+from rich.panel import Panel
+from rich.text import Text
+
 from enum import Enum
 
 
@@ -31,6 +34,9 @@ isContactSet = False
 
 isConnectedToContact = 0
 contactConnectedTo = ""
+
+didServerRespond = UsernameState.UNSET
+serverResponseData = None
 
 ########## SOCKET.IO CODE ##########
 
@@ -82,11 +88,20 @@ def on_response_connect_to(data):
     else:
         isConnectedToContact = data["status"]
 
+@sio.on("serverResponse")
+def on_server_response(data):
+    global didServerRespond
+    global serverResponseData
+    serverResponseData = data
+    didServerRespond = UsernameState.SET
+
 
 @sio.on("message")
 def on_message(data):
     # print(data)
     # print(type(data))
+    # global didServerRespond
+    # didServerRespond = UsernameState.SET
     console.print(f"\n[blue]{data['from']}[/blue]: {data['msg']}")
 
 # When a user sends a message to another user we need to display it if the user is connected to the other user
@@ -182,6 +197,53 @@ def save_new_contact():
     # send to server
     sio.emit("addContact", {"from": username, "contact": new_contact})
 
+def handle_get_messages():
+    global contactConnectedTo
+    global isConnectedToContact
+    global didServerRespond
+    global serverResponseData
+    didServerRespond = UsernameState.UNSET
+
+    # ask the user to ask for a contact using his rich prompt
+    # contackts is a list of dictionaries
+    contact_selected = Prompt.ask("Enter the name of the contact you want to get messages from", choices=[
+                                  contact["name"] for contact in contacts.values()])
+
+    sio.emit("getMessages", {"to": contact_selected, "from": username}) 
+
+    while didServerRespond == UsernameState.UNSET:
+        time.sleep(0.1)
+
+    if serverResponseData is None:
+        console.print(f"[red]Error: {didServerRespond}[/red]")
+        didServerRespond = UsernameState.UNSET
+    else:
+        didServerRespond = UsernameState.UNSET
+        console.print(f"[green]Messages from {contact_selected}[/green]")
+        for message in serverResponseData.values():
+            if message["from"] == username:
+                console.print(
+                    # Text(message["from"], style="bold cyan"),
+                    Text("You", style="bold cyan"),
+                    Text(f" {message['time']}", style="dim"),
+                    justify="right",
+                )
+                console.print(
+                    Text(message["msg"], style="white"),
+                    justify="right",
+                )
+            else:
+                console.print(
+                    Text(message["from"], style="bold cyan"),
+                    Text(f" {message['time']}", style="dim"),
+                    justify="left",
+                )
+                console.print(
+                    Text(message["msg"], style="white"),
+                    justify="left",
+                )
+
+    
 
 def send_message():
     global contactConnectedTo
@@ -263,7 +325,7 @@ def main():
 
     while True:
         # ask what the user wants to do
-        options = ["Show contacts", "Add contact", "Send message", "Exit"]
+        options = ["Show contacts", "Add contact", "Send message", "getMessages", "Exit"]
         selected_option = Prompt.ask(
             "Please select an option:", choices=options)
         if selected_option == "Show contacts":
@@ -272,6 +334,8 @@ def main():
             save_new_contact()
         elif selected_option == "Send message":
             send_message()
+        elif selected_option == "getMessages":
+            handle_get_messages()
         elif selected_option == "Exit":
             break
         else:

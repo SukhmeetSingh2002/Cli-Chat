@@ -217,6 +217,25 @@ const handleSaveContacts = (socket) => (data) => {
   }
 };
 
+const handleGetMessages = (socket) => async (data) => {
+  logger.info("handleGetMessages");
+  logger.info("data: ", data);
+
+  const chatId = generateChatId(data.from, data.to);
+  logger.info("chatId: ", chatId);
+
+  try {
+    const messages = await fetchMessageHistory(chatId);
+    logger.info("messages: ", messages);
+    socket.emit("serverResponse", messages);
+  } catch (error) {
+    logger.error("Error retrieving messages:", error);
+    socket.emit("serverResponse", null);
+  }
+};
+
+
+
 // Helper functions
 const storeMessage = (user, from, msg, time) => {
   const chatId = generateChatId(user, from);
@@ -248,6 +267,15 @@ const fetchUsers = async () => {
     logger.error("Error retrieving users:", error);
     return [];
   }
+};
+
+const fetchMessageHistory = async (chatId) => {
+  const messagesSnapshot = await database
+    .ref("/chats/" + chatId)
+    .orderByChild("time")
+    .once("value");
+  const messages = messagesSnapshot.val();
+  return messages;
 };
 
 // get all messages from a chatId
@@ -282,6 +310,7 @@ io.on("connection", async (socket) => {
   socket.on("getContacts", handleGetContacts(socket));
   socket.on("sendTo", handleSendTo(socket));
   socket.on("connectTo", handleConnectTo(socket));
+  socket.on("getMessages", handleGetMessages(socket));
 });
 
 server.listen(3000, () => {
