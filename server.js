@@ -123,8 +123,6 @@ const handleSaveContacts = (socket) => (data) => {
         from: "Server",
         msg: `User ${data.contact.username} not found`,
       });
-        `Error: User ${data.contact.username}, ${socket.id} not found`
-      );
       return;
     }
     // if the contact is in the users list
