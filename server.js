@@ -36,9 +36,7 @@ const handleLogin = async (socket, data) => {
     socket.username = username;
     clientMap.set(socket.username, socket.id);
 
-    logger.info("User logged in successfully.");
   } catch (error) {
-    logger.error("Error logging in:" + error);
 
     socket.emit("userExists", `Error: ${error.message}! Try again.`);
   }
@@ -49,9 +47,6 @@ const handleSetUsername = (socket) => (data) => {
   handleLogin(socket, data);
 };
 const handleSendTo = (socket) => (data) => {
-  logger.info("sendTo event");
-  logger.info("to: ", data.to);
-  logger.info("msg: ", data.msg);
 
   const clientId = clientMap.get(data.to);
   const sendTime = new Date().toLocaleString();
@@ -79,32 +74,22 @@ const handleSendTo = (socket) => (data) => {
 
 const handleGetContacts = (socket) => async (data) => {
   username = data.username;
-  logger.info("handleGetContacts" + username);
-  logger.info("handleGetContacts", username);
   try {
     const contactsSnapshot = await database
       .ref("/contacts/" + username)
       .once("value");
     const contacts = contactsSnapshot.val();
-    logger.info("contacts: ", contacts);
     socket.emit("contacts", contacts);
   } catch (error) {
-    logger.error("Error retrieving contacts:", error);
     socket.emit("contacts", null);
   }
 };
 
 const handleConnectTo = (socket) => (data) => {
-  logger.info("connectTo event");
-  logger.info(socket);
-  logger.info(socket.username);
   //   print user and clientMap
-  logger.info("All users: " + users);
   console.log("clientMap: ", clientMap);
-  logger.info("to: " + data.to);
 
   const clientId = clientMap.get(data.to);
-  logger.info("clientId: " + clientId);
   if (clientId) {
     socket.emit("responseConnectTo", {
       from: "Server",
@@ -123,15 +108,12 @@ const handleConnectTo = (socket) => (data) => {
 };
 
 const handleSaveContacts = (socket) => (data) => {
-  logger.info("handleSaveContacts");
-  logger.info("data: ", data);
 
   if (data === null || data === undefined) {
     socket.emit("message", {
       from: "Server",
       msg: `Error: ${data}! Try again.`,
     });
-    logger.error(`Error: ${data}, ${socket.id} not found`);
     return;
   }
   if (users.includes(data.from.username)) {
@@ -141,7 +123,6 @@ const handleSaveContacts = (socket) => (data) => {
         from: "Server",
         msg: `User ${data.contact.username} not found`,
       });
-      logger.error(
         `Error: User ${data.contact.username}, ${socket.id} not found`
       );
       return;
@@ -156,7 +137,6 @@ const handleSaveContacts = (socket) => (data) => {
       from: "Server",
       msg: `User ${data.contact.username} added`,
     });
-    logger.info(`User ${data.contact.username} added`);
   } else {
     socket.emit("message", {
       from: "Server",
@@ -167,18 +147,13 @@ const handleSaveContacts = (socket) => (data) => {
 };
 
 const handleGetMessages = (socket) => async (data) => {
-  logger.info("handleGetMessages");
-  logger.info("data: ", data);
 
   const chatId = generateChatId(data.from, data.to);
-  logger.info("chatId: ", chatId);
 
   try {
     const messages = await fetchMessageHistory(chatId);
-    logger.info("messages: ", messages);
     socket.emit("serverResponse", messages);
   } catch (error) {
-    logger.error("Error retrieving messages:", error);
     socket.emit("serverResponse", null);
   }
 };
@@ -211,7 +186,6 @@ const fetchUsers = async () => {
     // console.log("users: ", users);
     return users;
   } catch (error) {
-    logger.error("Error retrieving users:", error);
     return [];
   }
 };
@@ -241,13 +215,11 @@ io.use(async (socket, next) => {
   // const fetchedUsers = await fetchUsers();
   // // set all users variable
   // users = fetchedUsers;
-  // logger.info("users: ", users);
 
   // wait for 5 seconds
 
   const token = socket.handshake.auth.token;
   // verify token
-  // logger.info("token: " + token);
   if (!token) {
     return next(new Error("invalid token"));
   } else {
@@ -257,8 +229,6 @@ io.use(async (socket, next) => {
 
       // get usernaem and email from decoded token
       const { name, email, email_verified } = decodedToken;
-      // logger.info("decodedToken: ", decodedToken);
-      // logger.info("email_verified: ", email_verified);
       if (!email_verified) {
         // Throw an HttpsError so that the client gets the error details.
         return next(new Error("email not verified"));
@@ -272,7 +242,6 @@ io.use(async (socket, next) => {
       const username = userData['name']
 
       if (!username) {
-        logger.error("Error: invalid username");
         return next(new Error("invalid username"));
       }
 
@@ -282,7 +251,6 @@ io.use(async (socket, next) => {
         email: email,
       });
     } catch (error) {
-      logger.error("Error verifying token:", error);
       console.log("Error verifying token:", error);
       return next(new Error("invalid token"));
     }
@@ -306,5 +274,4 @@ io.on("connection", async (socket) => {
 });
 
 server.listen(3000, () => {
-  logger.info("Server listening on port 3000");
 });
