@@ -54,7 +54,6 @@ const handleSendTo = (socket) => (data) => {
   if (clientId) {
     socket.to(clientId).emit("chatMessage", data);
     storeMessage(data.to, data.from, data.msg, sendTime);
-    winston.info(`Sent message to ${data.from}: ${data.msg}`);
   } else if (users.includes(data.to)) {
     socket.emit("message", {
       from: "Server",
@@ -62,13 +61,11 @@ const handleSendTo = (socket) => (data) => {
     });
     storeMessage(data.to, data.from, data.msg, sendTime);
     // storeMessage(data.from, "You", data.msg, sendTime);
-    winston.info(`Offline Sent message to ${data.from}: ${data.msg}`);
   } else {
     socket.emit("message", {
       from: "Server",
       msg: `User ${data.to} not found`,
     });
-    winston.error(`Error: User ${data.to}, ${socket.id} not found`);
   }
 };
 
@@ -96,14 +93,12 @@ const handleConnectTo = (socket) => (data) => {
       to: data.to,
       status: "ok",
     });
-    winston.info(`connectTo: ${data.to}, ${socket.id} found`);
   } else {
     socket.emit("responseConnectTo", {
       from: "Server",
       to: data.to,
       status: "offline",
     });
-    winston.error(`connectTo: ${data.to}, ${socket.id} Offline`);
   }
 };
 
@@ -140,7 +135,6 @@ const handleSaveContacts = (socket) => (data) => {
       from: "Server",
       msg: `User ${data.from.username} not found`,
     });
-    winston.error(`Error: User ${data.from.username}, ${socket.id} not found`);
   }
 };
 
