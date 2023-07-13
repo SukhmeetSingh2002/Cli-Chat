@@ -7,4 +7,13 @@ firebaseTest.js
 client.js
 *-lock.json
 
+web/
 *.log
+
+.cli-credentials
+post_data.txt
+error.txt
+auth.js
+userCreateFuntion.js
+testnew.py
+__pycache__

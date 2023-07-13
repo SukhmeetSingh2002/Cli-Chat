@@ -12,7 +12,9 @@ from rich.text import Text
 
 from enum import Enum
 
-
+import sys
+sys.path.append("./client")
+import token_port
 class UsernameState(Enum):
     UNSET = 0
     WAITING = 1
@@ -56,6 +58,8 @@ def on_user_exists(error):
 @sio.on("userSet")
 def on_user_set(data):
     global isUsernameSet
+    global username
+    username = data
     isUsernameSet = UsernameState.SET
     console.print(f"[green]Username set to {data}[/green]")
 
@@ -290,21 +294,7 @@ def main():
     global isConnectedToContact
 
     while isUsernameSet != UsernameState.SET:
-        console.print("What would you like to do?")
-        console.print("[bold]1[/bold]. Register new user")
-        console.print("[bold]2[/bold]. Login")
-
-        action = Prompt.ask("Enter the number corresponding to your choice:", choices=[
-                            "1", "2"], default="2")
-
-        if action == "1":
-            username = register_new_user(sio)
-        elif action == "2":
-            username = login_user(sio)
-        else:
-            console.print("Invalid action. Please try again.")
-
-    save_contacts()
+        time.sleep(0.1)
 
     # show the user a list of his contacts
     getContacts()
@@ -344,11 +334,17 @@ def main():
     # Disconnect from the server
     sio.disconnect()
 
-
-
 if __name__ == "__main__":
-    # Connect to the server
-    sio.connect("http://localhost:3000")
+    # get auth details
+    token=token_port.get_auth_details()
+    token=token['accessToken']
+    try:
+        # increase the timeout to 10 seconds
+        sio.connect("http://localhost:3000", auth={"token": token}, wait_timeout=10)
+    except Exception as e:
+        print("Error connecting to server")
+        print("Token expired, retry to get a new token, or Email not verified, Or username not set")
+        print("Error: ", e)
+        token_port.save_token({"stsTokenManager":""}) # delete token
+        exit()
     main()
-    # options = ["Option 1", "Option 2", "Option 3"]
-    # selected_option = Prompt.ask("Please select an option:", choices=options)

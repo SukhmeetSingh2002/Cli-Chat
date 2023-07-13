@@ -23,78 +23,18 @@ const logger = winston.createLogger({
 let clientMap = new Map();
 let users = [];
 
-// Event handlers
-const handleRegisterUser = async (socket, data) => {
-  // Extract the necessary data
-  const { username, email, password } = data;
 
-  logger.info(`Registering new user: ${username}`);
-  logger.info(`Email: ${email}`);
-  logger.info(`Password: ${password}`);
-
-  try {
-    // Check if the username already exists
-    if (users.includes(username)) {
-      throw new Error(
-        `${username} username is taken! Try some other username.`
-      );
-    }
-
-    // Create a new user with the provided email and password
-    const userRecord = await auth.createUser({
-      email: email,
-      password: password,
-      displayName: username,
-    });
-
-    // Update the user list and socket properties
-    users.push(username);
-    socket.username = username;
-    clientMap.set(socket.username, socket.id);
-
-    socket.emit("userSet", { username: username });
-
-    logger.info("Successfully created new user:", userRecord.uid);
-  } catch (error) {
-    logger.error("Error creating user:", error);
-
-    socket.emit("userExists", `Error: ${error.message}! Try again.`);
-  }
-};
 
 const handleLogin = async (socket, data) => {
   // Extract the necessary data
-  const { username, email, password } = data;
-
-  logger.info(`Logging in with username: ${username}`);
-  logger.info(`Logging in with email: ${email}`);
-  logger.info(`Password: ${password}`);
-
-  if (!users.includes(username)) {
-    socket.emit("userExists", `Error: ${username} does not exist! Try again.`);
-    return;
-  }
+  const { username, email } = data;
 
   try {
-    // Generate the email sign-in link
-    const actionCodeSettings = {
-      url: "http://localhost:5500",
-      handleCodeInApp: false,
-    };
-    const link = await auth.generateSignInWithEmailLink(
-      email,
-      actionCodeSettings
-    );
-    logger.info("Generated sign-in link:" + link);
-
-    // Send the email to the user with the link
-
     socket.emit("userSet", { username: username });
 
     // Update the user list and socket properties
     socket.username = username;
     clientMap.set(socket.username, socket.id);
-    
 
     logger.info("User logged in successfully.");
   } catch (error) {
@@ -106,17 +46,7 @@ const handleLogin = async (socket, data) => {
 
 // Handle the "setUsername" event
 const handleSetUsername = (socket) => (data) => {
-  // Determine the action based on the provided data
-  if (data.action === "register") {
-    handleRegisterUser(socket, data);
-  } else if (data.action === "login") {
-    handleLogin(socket, data);
-  }
-
-  // logger.info("All users:==================== "+users, users);
-  // clientMap.forEach((value, key) => {
-  //   logger.info(`${key} ======================= ${value}`);
-  // });
+  handleLogin(socket, data);
 };
 const handleSendTo = (socket) => (data) => {
   logger.info("sendTo event");
@@ -147,13 +77,16 @@ const handleSendTo = (socket) => (data) => {
   }
 };
 
-const handleGetContacts = (socket) => async (username) => {
-  logger.info("handleGetContacts");
+const handleGetContacts = (socket) => async (data) => {
+  username = data.username;
+  logger.info("handleGetContacts" + username);
+  logger.info("handleGetContacts", username);
   try {
     const contactsSnapshot = await database
       .ref("/contacts/" + username)
       .once("value");
     const contacts = contactsSnapshot.val();
+    logger.info("contacts: ", contacts);
     socket.emit("contacts", contacts);
   } catch (error) {
     logger.error("Error retrieving contacts:", error);
@@ -163,6 +96,8 @@ const handleGetContacts = (socket) => async (username) => {
 
 const handleConnectTo = (socket) => (data) => {
   logger.info("connectTo event");
+  logger.info(socket);
+  logger.info(socket.username);
   //   print user and clientMap
   logger.info("All users: " + users);
   console.log("clientMap: ", clientMap);
@@ -191,29 +126,43 @@ const handleSaveContacts = (socket) => (data) => {
   logger.info("handleSaveContacts");
   logger.info("data: ", data);
 
-  if (users.includes(data.from)) {
+  if (data === null || data === undefined) {
+    socket.emit("message", {
+      from: "Server",
+      msg: `Error: ${data}! Try again.`,
+    });
+    logger.error(`Error: ${data}, ${socket.id} not found`);
+    return;
+  }
+  if (users.includes(data.from.username)) {
     // if the contact is not in the users list
     if (!users.includes(data.contact.username)) {
       socket.emit("message", {
         from: "Server",
         msg: `User ${data.contact.username} not found`,
       });
-      winston.error(
+      logger.error(
         `Error: User ${data.contact.username}, ${socket.id} not found`
       );
       return;
     }
     // if the contact is in the users list
-    database.ref("/contacts/" + data.from).push({
+    const contactRef = database.ref("/contacts/" + data.from.username);
+    contactRef.child(data.contact.username).set({
       name: data.contact.name,
       username: data.contact.username,
     });
+    socket.emit("message", {
+      from: "Server",
+      msg: `User ${data.contact.username} added`,
+    });
+    logger.info(`User ${data.contact.username} added`);
   } else {
     socket.emit("message", {
       from: "Server",
-      msg: `User ${data.from} not found`,
+      msg: `User ${data.from.username} not found`,
     });
-    winston.error(`Error: User ${data.from}, ${socket.id} not found`);
+    winston.error(`Error: User ${data.from.username}, ${socket.id} not found`);
   }
 };
 
@@ -233,8 +182,6 @@ const handleGetMessages = (socket) => async (data) => {
     socket.emit("serverResponse", null);
   }
 };
-
-
 
 // Helper functions
 const storeMessage = (user, from, msg, time) => {
@@ -259,7 +206,7 @@ const fetchUsers = async () => {
       displayName: userRecord.displayName,
     }));
 
-    const users = usersData.map((user) => user.displayName);
+    const users = usersData.map((user) => user.email);
     // console.log("userData: ", usersData);
     // console.log("users: ", users);
     return users;
@@ -288,19 +235,64 @@ const getMessages = async (chatId) => {
   return messages;
 };
 
+// add a middleware
+io.use(async (socket, next) => {
+  // Fetch and store the list of users
+  // const fetchedUsers = await fetchUsers();
+  // // set all users variable
+  // users = fetchedUsers;
+  // logger.info("users: ", users);
+
+  // wait for 5 seconds
+
+  const token = socket.handshake.auth.token;
+  // verify token
+  // logger.info("token: " + token);
+  if (!token) {
+    return next(new Error("invalid token"));
+  } else {
+    // verify token
+    try {
+      const decodedToken = await auth.verifyIdToken(token);
+
+      // get usernaem and email from decoded token
+      const { name, email, email_verified } = decodedToken;
+      // logger.info("decodedToken: ", decodedToken);
+      // logger.info("email_verified: ", email_verified);
+      if (!email_verified) {
+        // Throw an HttpsError so that the client gets the error details.
+        return next(new Error("email not verified"));
+      }
+
+      // fetch /users/{uid} from realtime database, it contains username
+      const userSnapshot = await database
+        .ref("/users/" + decodedToken.uid)
+        .once("value");
+      const userData = userSnapshot.val();
+      const username = userData['name']
+
+      if (!username) {
+        logger.error("Error: invalid username");
+        return next(new Error("invalid username"));
+      }
+
+      // store username in socket
+      handleSetUsername(socket)({
+        username: username,
+        email: email,
+      });
+    } catch (error) {
+      logger.error("Error verifying token:", error);
+      console.log("Error verifying token:", error);
+      return next(new Error("invalid token"));
+    }
+  }
+  next();
+});
+
 // Socket.io event handlers
 io.on("connection", async (socket) => {
   logger.info("A user connected");
-
-  // Fetch and store the list of users
-  const fetchedUsers = await fetchUsers();
-  // set all users variable
-  users = fetchedUsers;
-  // console.log("users: ", users);
-  // socket.emit("users", users);
-
-  // Rest of the event handlers
-  socket.on("setUsername", handleSetUsername(socket));
   socket.on("disconnect", () => {
     clientMap.delete(socket.username);
     logger.info("A user disconnected");
@@ -316,5 +308,3 @@ io.on("connection", async (socket) => {
 server.listen(3000, () => {
   logger.info("Server listening on port 3000");
 });
-
-// A- true
