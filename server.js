@@ -23,8 +23,6 @@ const logger = winston.createLogger({
 let clientMap = new Map();
 let users = [];
 
-
-
 const handleLogin = async (socket, data) => {
   // Extract the necessary data
   const { username, email } = data;
@@ -35,9 +33,7 @@ const handleLogin = async (socket, data) => {
     // Update the user list and socket properties
     socket.username = username;
     clientMap.set(socket.username, socket.id);
-
   } catch (error) {
-
     socket.emit("userExists", `Error: ${error.message}! Try again.`);
   }
 };
@@ -47,19 +43,18 @@ const handleSetUsername = (socket) => (data) => {
   handleLogin(socket, data);
 };
 const handleSendTo = (socket) => (data) => {
-
   const clientId = clientMap.get(data.to);
   const sendTime = new Date().toLocaleString();
 
   if (clientId) {
     socket.to(clientId).emit("chatMessage", data);
-    storeMessage(data.to, data.from, data.msg, sendTime);
+    storeMessage(data.to, data.from.username, data.msg, sendTime);
   } else if (users.includes(data.to)) {
     socket.emit("message", {
       from: "Server",
       msg: `User ${data.to} is offline`,
     });
-    storeMessage(data.to, data.from, data.msg, sendTime);
+    storeMessage(data.to, data.from.username, data.msg, sendTime);
     // storeMessage(data.from, "You", data.msg, sendTime);
   } else {
     socket.emit("message", {
@@ -103,49 +98,51 @@ const handleConnectTo = (socket) => (data) => {
 };
 
 const handleSaveContacts = (socket) => (data) => {
-
   if (data === null || data === undefined) {
     socket.emit("message", {
       from: "Server",
-      msg: `Error: ${data}! Try again.`,
+      msg: "Error: Invalid data! Try again.",
     });
     return;
   }
-  if (users.includes(data.from.username)) {
-    // if the contact is not in the users list
-    if (!users.includes(data.contact.username)) {
-      socket.emit("message", {
-        from: "Server",
-        msg: `User ${data.contact.username} not found`,
-      });
-      return;
-    }
-    // if the contact is in the users list
-    const contactRef = database.ref("/contacts/" + data.from.username);
-    contactRef.child(data.contact.username).set({
-      name: data.contact.name,
-      username: data.contact.username,
+
+  const { contact, from } = data;
+
+  // Check if the contact is in the users list
+  const usersRef = database.ref("/users");
+  usersRef
+    .orderByChild("name")
+    .equalTo(contact.username)
+    .once("value", (snapshot) => {
+      if (!snapshot.exists()) {
+        socket.emit("message", {
+          from: "Server",
+          msg: `User ${contact.username} not found`,
+        });
+      } else {
+        // If the contact is in the users list, store the contact
+        const contactRef = database.ref(`/contacts/${from.username}`);
+        contactRef.child(contact.username).set({
+          name: contact.name,
+          username: contact.username,
+        });
+
+        socket.emit("message", {
+          from: "Server",
+          msg: `User ${contact.username} added`,
+        });
+      }
     });
-    socket.emit("message", {
-      from: "Server",
-      msg: `User ${data.contact.username} added`,
-    });
-  } else {
-    socket.emit("message", {
-      from: "Server",
-      msg: `User ${data.from.username} not found`,
-    });
-  }
 };
 
 const handleGetMessages = (socket) => async (data) => {
-
-  const chatId = generateChatId(data.from, data.to);
+  const chatId = generateChatId(data.from.username, data.to);
 
   try {
     const messages = await fetchMessageHistory(chatId);
     socket.emit("serverResponse", messages);
   } catch (error) {
+    console.log("error: ", error);
     socket.emit("serverResponse", null);
   }
 };
@@ -231,7 +228,7 @@ io.use(async (socket, next) => {
         .ref("/users/" + decodedToken.uid)
         .once("value");
       const userData = userSnapshot.val();
-      const username = userData['name']
+      const username = userData["name"];
 
       if (!username) {
         return next(new Error("invalid username"));
@@ -266,4 +263,5 @@ io.on("connection", async (socket) => {
 });
 
 server.listen(3000, () => {
+  console.log("listening on *:3000");
 });
