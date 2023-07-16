@@ -114,11 +114,11 @@ def on_message(data):
 @sio.on("chatMessage")
 def on_chat_message(data):
     global contactConnectedTo
-    if data["from"] == contactConnectedTo:
-        console.print(f"\n[blue]{data['from']}[/blue]: {data['msg']}")
+    if data["from"]['username'] == contactConnectedTo:
+        console.print(f"\n[blue]{data['from']['username']}[/blue]: {data['msg']}")
     else:
         console.print(
-            f"\n[blue]{data['from']}[/blue] sent you a message. Type 'connect {data['from']}' to connect to them")
+            f"\n[blue]{data['from']['username']}[/blue] sent you a message. Type 'connect {data['from']['username']}' to connect to them")
 
 
 ########## MAIN CODE ##########
@@ -194,7 +194,7 @@ def save_contacts():
 
 
 def save_new_contact():
-    new_contact_name = Prompt.ask("Enter the name of the contact")
+    new_contact_name = Prompt.ask("Enter the name of the contact you want to save as")
     new_contact_username = Prompt.ask("Enter the username of the contact")
 
     new_contact = {"name": new_contact_name, "username": new_contact_username}
@@ -257,7 +257,12 @@ def send_message():
     contact_selected = Prompt.ask("Enter the name of the contact you want to send a message to", choices=[
                                   contact["name"] for contact in contacts.values()])
 
-    # try to connect to the contact
+    # find the username of the contact
+    for contact in contacts.values():
+        if contact["name"] == contact_selected:
+            contact_selected = contact["username"]
+            break
+        
     sio.emit("connectTo", {"to": contact_selected, "from": username})
 
     # wait for the server to respond
@@ -322,6 +327,7 @@ def main():
             show_contacts(console, contacts)
         elif selected_option == "Add contact":
             save_new_contact()
+            getContacts()
         elif selected_option == "Send message":
             send_message()
         elif selected_option == "getMessages":

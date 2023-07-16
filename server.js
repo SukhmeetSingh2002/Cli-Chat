@@ -42,6 +42,7 @@ const handleLogin = async (socket, data) => {
 const handleSetUsername = (socket) => (data) => {
   handleLogin(socket, data);
 };
+
 const handleSendTo = (socket) => (data) => {
   const clientId = clientMap.get(data.to);
   const sendTime = new Date().toLocaleString();
@@ -49,18 +50,12 @@ const handleSendTo = (socket) => (data) => {
   if (clientId) {
     socket.to(clientId).emit("chatMessage", data);
     storeMessage(data.to, data.from.username, data.msg, sendTime);
-  } else if (users.includes(data.to)) {
+  } else {
     socket.emit("message", {
       from: "Server",
       msg: `User ${data.to} is offline`,
     });
     storeMessage(data.to, data.from.username, data.msg, sendTime);
-    // storeMessage(data.from, "You", data.msg, sendTime);
-  } else {
-    socket.emit("message", {
-      from: "Server",
-      msg: `User ${data.to} not found`,
-    });
   }
 };
 
@@ -188,38 +183,16 @@ const fetchMessageHistory = async (chatId) => {
   return messages;
 };
 
-// get all messages from a chatId
-const getMessages = async (chatId) => {
-  const messagesSnapshot = await database
-    .ref("/chats/" + chatId)
-    .orderByChild("time")
-    .once("value");
-  const messages = messagesSnapshot.val();
-  return messages;
-};
-
 // add a middleware
 io.use(async (socket, next) => {
-  // Fetch and store the list of users
-  // const fetchedUsers = await fetchUsers();
-  // // set all users variable
-  // users = fetchedUsers;
-
-  // wait for 5 seconds
-
   const token = socket.handshake.auth.token;
-  // verify token
   if (!token) {
     return next(new Error("invalid token"));
   } else {
-    // verify token
     try {
       const decodedToken = await auth.verifyIdToken(token);
-
-      // get usernaem and email from decoded token
       const { name, email, email_verified } = decodedToken;
       if (!email_verified) {
-        // Throw an HttpsError so that the client gets the error details.
         return next(new Error("email not verified"));
       }
 
