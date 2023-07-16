@@ -235,6 +235,6 @@ io.on("connection", async (socket) => {
   socket.on("getMessages", handleGetMessages(socket));
 });
 
-server.listen(3000, () => {
-  console.log("listening on *:3000");
+server.listen(process.env.PORT || 3000, () => {
+  console.log(`Server started on port ${server.address().port} :)`);
 });
