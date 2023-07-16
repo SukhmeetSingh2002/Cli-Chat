@@ -3,18 +3,28 @@ import time
 import socketio
 
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.prompt import Prompt
 from rich.table import Table
+
+from prompt_toolkit import prompt
+from prompt_toolkit import prompt, print_formatted_text
+from prompt_toolkit.completion import FuzzyWordCompleter
+from prompt_toolkit import PromptSession
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.history import FileHistory
 
 from rich.panel import Panel
 from rich.text import Text
 
 from enum import Enum
 
+# import custom modules
 import sys
 sys.path.append("./client")
 import token_port
+
+
+
 class UsernameState(Enum):
     UNSET = 0
     WAITING = 1
@@ -92,6 +102,7 @@ def on_response_connect_to(data):
     else:
         isConnectedToContact = data["status"]
 
+
 @sio.on("serverResponse")
 def on_server_response(data):
     global didServerRespond
@@ -115,7 +126,8 @@ def on_message(data):
 def on_chat_message(data):
     global contactConnectedTo
     if data["from"]['username'] == contactConnectedTo:
-        console.print(f"\n[blue]{data['from']['username']}[/blue]: {data['msg']}")
+        console.print(
+            f"\n[blue]{data['from']['username']}[/blue]: {data['msg']}")
     else:
         console.print(
             f"\n[blue]{data['from']['username']}[/blue] sent you a message. Type 'connect {data['from']['username']}' to connect to them")
@@ -194,14 +206,16 @@ def save_contacts():
 
 
 def save_new_contact():
-    new_contact_name = Prompt.ask("Enter the name of the contact you want to save as")
+    new_contact_name = Prompt.ask(
+        "Enter the name of the contact you want to save as")
     new_contact_username = Prompt.ask("Enter the username of the contact")
 
     new_contact = {"name": new_contact_name, "username": new_contact_username}
     # send to server
     sio.emit("addContact", {"from": username, "contact": new_contact})
 
-def handle_get_messages():
+
+def handle_get_messages(session_username):
     global contactConnectedTo
     global isConnectedToContact
     global didServerRespond
@@ -210,10 +224,19 @@ def handle_get_messages():
 
     # ask the user to ask for a contact using his rich prompt
     # contackts is a list of dictionaries
-    contact_selected = Prompt.ask("Enter the name of the contact you want to get messages from", choices=[
-                                  contact["name"] for contact in contacts.values()])
+    # contact_selected = Prompt.ask("Enter the name of the contact you want to get messages from", choices=[
+    #                               contact["name"] for contact in contacts.values()])
 
-    sio.emit("getMessages", {"to": contact_selected, "from": username}) 
+    available_contacts = [contact["name"] for contact in contacts.values()]
+    contact_selected = session_username.prompt("Enter the name of the contact you want to send a message to:", completer=FuzzyWordCompleter(
+        available_contacts), mouse_support=True, complete_while_typing=True, auto_suggest=AutoSuggestFromHistory(), bottom_toolbar="Press tab for options, Up arrow for history")
+
+    if contact_selected not in available_contacts:
+        console.print(
+            f"[red]Error: {contact_selected} is not a valid contact[/red]")
+        return
+    
+    sio.emit("getMessages", {"to": contact_selected, "from": username})
 
     while didServerRespond == UsernameState.UNSET:
         time.sleep(0.1)
@@ -247,22 +270,15 @@ def handle_get_messages():
                     justify="left",
                 )
 
-    
 
-def send_message():
-    global contactConnectedTo
+def connect_to_contact(contact_selected):
     global isConnectedToContact
-    # ask the user to ask for a contact using his rich prompt
-    # contackts is a list of dictionaries
-    contact_selected = Prompt.ask("Enter the name of the contact you want to send a message to", choices=[
-                                  contact["name"] for contact in contacts.values()])
-
     # find the username of the contact
     for contact in contacts.values():
         if contact["name"] == contact_selected:
             contact_selected = contact["username"]
             break
-        
+
     sio.emit("connectTo", {"to": contact_selected, "from": username})
 
     # wait for the server to respond
@@ -272,6 +288,7 @@ def send_message():
     if isConnectedToContact != 1:
         console.print(f"[red]Error: {isConnectedToContact}[/red]")
         isConnectedToContact = 0
+        return False
     else:
         # print a message to the user
         isConnectedToContact = 0
@@ -280,14 +297,44 @@ def send_message():
             f"[green]Type your message and press enter to send it[/green]")
         console.print(
             f"[green]Type 'exit' to disconnect from {contact_selected}[/green]")
-        while True:
-            # Read input from the user
-            your_message = input("You:")
-            if your_message == "exit":
-                break
+        return True
 
-            sio.emit("sendTo", {"to": contact_selected,
-                     "msg": your_message, "from": username})
+
+def send_message(session_username):
+    global contactConnectedTo
+    global isConnectedToContact
+    # ask the user to select a contact using a rich prompt
+
+    # contact_selected = Prompt.ask("Enter the name of the contact you want to send a message to:", choices=[
+    #                               contact["name"] for contact in contacts.values()])
+
+    available_contacts = [contact["name"] for contact in contacts.values()]
+    contact_selected = session_username.prompt("Enter the name of the contact you want to send a message to:", completer=FuzzyWordCompleter(
+        available_contacts), mouse_support=True, complete_while_typing=True, auto_suggest=AutoSuggestFromHistory(), bottom_toolbar="Press tab for options, Up arrow for history")
+
+    if contact_selected not in available_contacts:
+        console.print(
+            f"[red]Error: {contact_selected} is not a valid contact[/red]")
+        return
+    
+
+    is_connected = connect_to_contact(contact_selected)
+
+    if not is_connected:
+        # print in read that client is not online but still send the message
+        console.print(
+            f"[red]Client {contact_selected} is not online, but we will still send the message[/red]")
+        # send the message to the server
+
+    # Chat loop
+    while True:
+        # Read input from the user
+        your_message = prompt("You:")
+        if your_message == "exit":
+            break
+
+        sio.emit("sendTo", {"to": contact_selected,
+                 "msg": your_message, "from": username})
 
 
 def main():
@@ -297,6 +344,9 @@ def main():
     global contacts
     global isContactSet
     global isConnectedToContact
+    session_menue = PromptSession(history=FileHistory('./.menuHistory'))
+    session_username = PromptSession(history=FileHistory('./.usernameHistory'))
+    # session_menue = PromptSession(history=FileHistory('./.myhistory'))
 
     while isUsernameSet != UsernameState.SET:
         time.sleep(0.1)
@@ -318,39 +368,55 @@ def main():
     # print(contacts)
     input("Press enter to continue")
 
+    # Ask what the user wants to do
+    options_list = ["Show contacts", "Add contact",
+                    "Send message", "getMessages", "Exit"]
+    # show the options list to the user
+    console.print("Your options are:")
+    for option in options_list:
+        console.print(f" - {option}")
+
     while True:
-        # ask what the user wants to do
-        options = ["Show contacts", "Add contact", "Send message", "getMessages", "Exit"]
-        selected_option = Prompt.ask(
-            "Please select an option:", choices=options)
+
+        # ask the user to select an option
+        options = FuzzyWordCompleter(options_list)
+        selected_option = session_menue.prompt("Please select an option:", completer=options,
+                                               bottom_toolbar="Press tab for options, Up arrow for history", mouse_support=True, complete_while_typing=True, auto_suggest=AutoSuggestFromHistory())
+
         if selected_option == "Show contacts":
             show_contacts(console, contacts)
         elif selected_option == "Add contact":
             save_new_contact()
             getContacts()
         elif selected_option == "Send message":
-            send_message()
+            send_message(session_username)
         elif selected_option == "getMessages":
-            handle_get_messages()
+            handle_get_messages(session_username)
         elif selected_option == "Exit":
             break
         else:
             console.print("Invalid option")
+            # show the options list to the user
+            console.print("Your options are:")
+            for option in options_list:
+                console.print(f" - {option}")
 
     # Disconnect from the server
     sio.disconnect()
 
+
 if __name__ == "__main__":
     # get auth details
-    token=token_port.get_auth_details()
-    token=token['accessToken']
+    token = token_port.get_auth_details()
+    token = token['accessToken']
     try:
         # increase the timeout to 10 seconds
-        sio.connect("http://localhost:3000", auth={"token": token}, wait_timeout=10)
+        sio.connect("http://localhost:3000",
+                    auth={"token": token}, wait_timeout=10)
     except Exception as e:
         print("Error connecting to server")
         print("Token expired, retry to get a new token, or Email not verified, Or username not set")
         print("Error: ", e)
-        token_port.save_token({"stsTokenManager":""}) # delete token
+        token_port.save_token({"stsTokenManager": ""})  # delete token
         exit()
     main()
