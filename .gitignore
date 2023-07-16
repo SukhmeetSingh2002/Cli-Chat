@@ -3,12 +3,12 @@ node_modules
 .vscode
 serviceAccount.json
 .env
-firebaseTest.js
 client.js
 *-lock.json
 
 web/
 *.log
+config.ini
 
 .cli-credentials
 post_data.txt

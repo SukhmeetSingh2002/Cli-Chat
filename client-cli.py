@@ -17,11 +17,16 @@ from rich.panel import Panel
 from rich.text import Text
 
 from enum import Enum
+import configparser
 
 # import custom modules
 import sys
 sys.path.append("./client")
 import token_port
+
+# Load the config from the file
+config = configparser.ConfigParser()
+config.read("config.ini")
 
 
 
@@ -338,14 +343,17 @@ def send_message(session_username):
 
 
 def main():
+    session_menue_history = config.get("Sessions", "session_menue_history")
+    session_username_history = config.get("Sessions", "session_username_history")
+
     # define variables
     global username
     global isUsernameSet
     global contacts
     global isContactSet
     global isConnectedToContact
-    session_menue = PromptSession(history=FileHistory('./.menuHistory'))
-    session_username = PromptSession(history=FileHistory('./.usernameHistory'))
+    session_menue = PromptSession(history=FileHistory(session_menue_history))
+    session_username = PromptSession(history=FileHistory(session_username_history))
     # session_menue = PromptSession(history=FileHistory('./.myhistory'))
 
     while isUsernameSet != UsernameState.SET:
@@ -406,13 +414,17 @@ def main():
 
 
 if __name__ == "__main__":
+
+    connect_url = config.get("SocketIO", "connect_url")
+    wait_timeout = config.getint("SocketIO", "wait_timeout")
+
     # get auth details
     token = token_port.get_auth_details()
     token = token['accessToken']
     try:
         # increase the timeout to 10 seconds
-        sio.connect("http://localhost:3000",
-                    auth={"token": token}, wait_timeout=10)
+        sio.connect(connect_url,
+                    auth={"token": token}, wait_timeout=wait_timeout)
     except Exception as e:
         print("Error connecting to server")
         print("Token expired, retry to get a new token, or Email not verified, Or username not set")

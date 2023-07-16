@@ -3,6 +3,13 @@ import random
 import webbrowser
 import http.server
 import socketserver
+import configparser
+
+# Load the config from the file
+config = configparser.ConfigParser()
+config.read("config.ini")
+
+callback_url = config.get("WebBrowser", "callback_url")
 
 AUTH_TOKEN = None
 
@@ -49,13 +56,14 @@ def redirect_to_auth_page(port):
     # Implement code to redirect the user to the authentication webpage
     
     # open a web browser
-    webbrowser.open(f"http://localhost:3001/?callbackPort={port}")
+    webbrowser.open(f"{callback_url}?callbackPort={port}")
 
 def listen_for_token(port):
     # Start a server to listen for the token
     Handler = TokenHandler
     with socketserver.TCPServer(("", port), Handler) as httpd:
         print("Server started on port", port)
+        httpd.handle_request()
         httpd.handle_request()
 
 
@@ -73,6 +81,13 @@ def save_token(token):
 
 
 class TokenHandler(http.server.BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+
     def do_POST(self):
         print("Received a POST request")
         content_length = int(self.headers['Content-Length'])
@@ -96,6 +111,9 @@ class TokenHandler(http.server.BaseHTTPRequestHandler):
         # Send a response to the browser
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
         self.wfile.write(b'{"status": "success"}')
 
