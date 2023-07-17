@@ -251,7 +251,7 @@ def handle_get_messages(session_username):
         didServerRespond = UsernameState.UNSET
         console.print(f"[green]Messages from {contact_selected}[/green]")
         for message in serverResponseData.values():
-            if message["from"] == username:
+            if message["from"] == username['username']:
                 console.print(
                     # Text(message["from"], style="bold cyan"),
                     Text("You", style="bold cyan"),
@@ -406,6 +406,8 @@ def main():
             console.print("Your options are:")
             for option in options_list:
                 console.print(f" - {option}")
+        
+        input("Press enter to continue")
 
     # Disconnect from the server
     sio.disconnect()
