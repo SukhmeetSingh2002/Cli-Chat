@@ -30,6 +30,13 @@ config["WebBrowser"] = {
 }
 
 
+config["Update"] = {
+    "update_url": "https://cli-chat-web.vercel.app/api/version",
+    "current_version": "1.0.0"
+}
+
+
+
 # Write the config to a file
 # with open("config.ini", "w") as config_file:
 with open(os.path.join(logs_directory, "config.ini"), "w") as config_file:

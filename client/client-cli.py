@@ -21,6 +21,7 @@ import configparser
 
 # import custom modules
 import token_port
+from updateCheck import main as update_main
 from os import path
 
 logs_directory = path.join(path.expanduser("~"), ".cliChatConfig")
@@ -419,6 +420,7 @@ def main():
 
 
 if __name__ == "__main__":
+    update_main()
 
     connect_url = config.get("SocketIO", "connect_url")
     wait_timeout = config.getint("SocketIO", "wait_timeout")
