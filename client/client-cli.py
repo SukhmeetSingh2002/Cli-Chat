@@ -21,10 +21,14 @@ import configparser
 
 # import custom modules
 import token_port
+from os import path
+
+logs_directory = path.join(path.expanduser("~"), ".cliChatConfig")
+
 
 # Load the config from the file
 config = configparser.ConfigParser()
-config.read("config.ini")
+config.read(path.join(logs_directory, "config.ini"))
 
 
 
@@ -272,6 +276,7 @@ def handle_get_messages(session_username):
                     Text(message["msg"], style="white"),
                     justify="left",
                 )
+            console.print()
 
 
 def connect_to_contact(contact_selected):

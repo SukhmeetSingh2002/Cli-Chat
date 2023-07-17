@@ -4,12 +4,17 @@ import webbrowser
 import http.server
 import socketserver
 import configparser
+from os import path
+
+logs_directory = path.join(path.expanduser("~"), ".cliChatConfig")
 
 # Load the config from the file
 config = configparser.ConfigParser()
-config.read("config.ini")
+config.read(path.join(logs_directory, "config.ini"))
 
 callback_url = config.get("WebBrowser", "callback_url")
+client_credentials_file = config.get("Sessions", "client_credentials_file")
+error_file = config.get("Sessions", "error_file")
 
 AUTH_TOKEN = None
 
@@ -42,7 +47,7 @@ def get_saved_token():
     # Implement code to retrieve the saved token from the user's computer
     # If token is not found, return None
     try:
-        with open('.cli-credentials', 'r') as f:
+        with open(client_credentials_file, 'r') as f:
             token = f.read()
         if token:
             token = json.loads(token)
@@ -62,7 +67,7 @@ def listen_for_token(port):
     # Start a server to listen for the token
     Handler = TokenHandler
     with socketserver.TCPServer(("", port), Handler) as httpd:
-        print("Server started on port", port)
+        # print("Server started on port", port)
         httpd.handle_request()
         httpd.handle_request()
 
@@ -72,11 +77,11 @@ def save_token(token):
     token = token.get('stsTokenManager')
     try:
         # write refresh token, access token and expiration time to a file in JSON format
-        with open('.cli-credentials', 'w') as f:
+        with open(client_credentials_file, 'w') as f:
             f.write(json.dumps(token, indent=4))
     except Exception as e:
         print("Error saving token:")
-        with open('error.txt', 'w') as f:
+        with open(error_file, 'w') as f:
             f.write(str(e))
 
 
@@ -89,12 +94,12 @@ class TokenHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        print("Received a POST request")
+        # print("Received a POST request")
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
             
-        with open('post_data.txt', 'w') as f:
-            f.write(json.dumps(json.loads(post_data), indent=4))
+        # with open('post_data.txt', 'w') as f:
+        #     f.write(json.dumps(json.loads(post_data), indent=4))
 
         token = self.extract_token_from_post_data(post_data)
         
