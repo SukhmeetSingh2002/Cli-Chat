@@ -22,6 +22,7 @@ import configparser
 # import custom modules
 import token_port
 from updateCheck import main as update_main
+from clientConfig import create_config
 from os import path
 
 logs_directory = path.join(path.expanduser("~"), ".cliChatConfig")
@@ -420,6 +421,9 @@ def main():
 
 
 if __name__ == "__main__":
+    # create the config file if it doesn't exist
+    create_config()
+
     update_main()
 
     connect_url = config.get("SocketIO", "connect_url")
