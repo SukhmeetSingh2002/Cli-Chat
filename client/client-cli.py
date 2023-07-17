@@ -20,8 +20,6 @@ from enum import Enum
 import configparser
 
 # import custom modules
-import sys
-sys.path.append("./client")
 import token_port
 
 # Load the config from the file
