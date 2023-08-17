@@ -6,6 +6,10 @@ serviceAccount.json
 client.js
 *-lock.json
 
+build/
+dist/
+*.spec
+
 web/
 *.log
 config.ini

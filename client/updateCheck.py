@@ -4,19 +4,26 @@ import subprocess
 
 import configparser
 
-# import custom modules
 from os import path
 
 logs_directory = path.join(path.expanduser("~"), ".cliChatConfig")
 
 
-# Load the config from the file
-config = configparser.ConfigParser()
-config.read(path.join(logs_directory, "config.ini"))
+UPDATE_URL = ""
+CURRENT_VERSION = ""
 
-# Define the update source URL
-UPDATE_URL = config.get("Update", "update_url")
-CURRENT_VERSION = config.get("Update", "current_version")
+# get config
+def get_config(UPDATE_URL, CURRENT_VERSION):
+    # Load the config from the file
+    config = configparser.ConfigParser()
+    config.read(path.join(logs_directory, "config.ini"))
+
+    # Define the update source URL
+    UPDATE_URL = config.get("Update", "update_url")
+    CURRENT_VERSION = config.get("Update", "current_version")
+
+    return UPDATE_URL, CURRENT_VERSION
+    
 
 # Function to check for updates
 def check_for_updates(current_version):
@@ -86,4 +93,5 @@ def main():
     # Rest of your application logic goes here
 
 if __name__ == "__main__":
+    UPDATE_URL, CURRENT_VERSION = get_config(UPDATE_URL, CURRENT_VERSION)
     main()

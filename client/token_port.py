@@ -8,13 +8,23 @@ from os import path
 
 logs_directory = path.join(path.expanduser("~"), ".cliChatConfig")
 
-# Load the config from the file
-config = configparser.ConfigParser()
-config.read(path.join(logs_directory, "config.ini"))
+callback_url = ""
+client_credentials_file = ""
+error_file = ""
 
-callback_url = config.get("WebBrowser", "callback_url")
-client_credentials_file = config.get("Sessions", "client_credentials_file")
-error_file = config.get("Sessions", "error_file")
+# get config
+def get_config(callback_url, client_credentials_file, error_file):
+    # Load the config from the file
+    config = configparser.ConfigParser()
+    config.read(path.join(logs_directory, "config.ini"))
+
+    # Define the update source URL
+    callback_url = config.get("WebBrowser", "callback_url")
+    client_credentials_file = config.get("Sessions", "client_credentials_file")
+    error_file = config.get("Sessions", "error_file")
+
+    return callback_url, client_credentials_file, error_file
+    
 
 AUTH_TOKEN = None
 
@@ -131,5 +141,7 @@ class TokenHandler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
+    # get config details
+    callback_url, client_credentials_file, error_file = get_config(callback_url, client_credentials_file, error_file)
     # Call the main function
     get_auth_details()
