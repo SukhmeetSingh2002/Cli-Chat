@@ -71,6 +71,9 @@ def update_application():
 
 # Entry point of your application
 def main():
+    global UPDATE_URL, CURRENT_VERSION
+    UPDATE_URL, CURRENT_VERSION = get_config(UPDATE_URL, CURRENT_VERSION)
+
     # Retrieve the current version of your application
     current_version = CURRENT_VERSION
     
@@ -93,5 +96,6 @@ def main():
     # Rest of your application logic goes here
 
 if __name__ == "__main__":
+    # global UPDATE_URL, CURRENT_VERSION
     UPDATE_URL, CURRENT_VERSION = get_config(UPDATE_URL, CURRENT_VERSION)
     main()

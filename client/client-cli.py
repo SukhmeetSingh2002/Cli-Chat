@@ -256,30 +256,57 @@ def handle_get_messages(session_username):
     else:
         didServerRespond = UsernameState.UNSET
         console.print(f"[green]Messages from {contact_selected}[/green]")
-        for message in serverResponseData.values():
-            if message["from"] == username['username']:
-                console.print(
-                    # Text(message["from"], style="bold cyan"),
-                    Text("You", style="bold cyan"),
-                    Text(f" {message['time']}", style="dim"),
-                    justify="right",
-                )
-                console.print(
-                    Text(message["msg"], style="white"),
-                    justify="right",
-                )
-            else:
-                console.print(
-                    Text(message["from"], style="bold cyan"),
-                    Text(f" {message['time']}", style="dim"),
-                    justify="left",
-                )
-                console.print(
-                    Text(message["msg"], style="white"),
-                    justify="left",
-                )
-            console.print()
-
+        # ask wheather wamt page or not
+        want_pager = Prompt.ask("Do you want to use the pager?", choices=["Y", "N"])
+        if want_pager == "Y":
+            with console.pager():
+                for message in serverResponseData.values():
+                    if message["from"] == username['username']:
+                        console.print(
+                            # Text(message["from"], style="bold cyan"),
+                            Text("You", style="bold cyan"),
+                            Text(f" {message['time']}", style="dim"),
+                            justify="right",
+                        )
+                        console.print(
+                            Text(message["msg"], style="white"),
+                            justify="right",
+                        )
+                    else:
+                        console.print(
+                            Text(message["from"], style="bold cyan"),
+                            Text(f" {message['time']}", style="dim"),
+                            justify="left",
+                        )
+                        console.print(
+                            Text(message["msg"], style="white"),
+                            justify="left",
+                        )
+                    console.print()
+        else:
+            for message in serverResponseData.values():
+                if message["from"] == username['username']:
+                    console.print(
+                        # Text(message["from"], style="bold cyan"),
+                        Text("You", style="bold cyan"),
+                        Text(f" {message['time']}", style="dim"),
+                        justify="right",
+                    )
+                    console.print(
+                        Text(message["msg"], style="white"),
+                        justify="right",
+                    )
+                else:
+                    console.print(
+                        Text(message["from"], style="bold cyan"),
+                        Text(f" {message['time']}", style="dim"),
+                        justify="left",
+                    )
+                    console.print(
+                        Text(message["msg"], style="white"),
+                        justify="left",
+                    )
+                console.print()
 
 def connect_to_contact(contact_selected):
     global isConnectedToContact

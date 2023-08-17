@@ -29,6 +29,9 @@ def get_config(callback_url, client_credentials_file, error_file):
 AUTH_TOKEN = None
 
 def get_auth_details():
+    global callback_url, client_credentials_file, error_file
+    callback_url, client_credentials_file, error_file = get_config(callback_url, client_credentials_file, error_file)
+
     global AUTH_TOKEN
     token = get_saved_token()
     
@@ -69,7 +72,9 @@ def get_saved_token():
 
 def redirect_to_auth_page(port):
     # Implement code to redirect the user to the authentication webpage
-    
+    print("Open the following URL in a web browser to authenticate:")
+    print(f"{callback_url}?callbackPort={port}")
+
     # open a web browser
     webbrowser.open(f"{callback_url}?callbackPort={port}")
 
@@ -141,7 +146,8 @@ class TokenHandler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    # get config details
+    # global callback_url, client_credentials_file, error_file
     callback_url, client_credentials_file, error_file = get_config(callback_url, client_credentials_file, error_file)
+
     # Call the main function
     get_auth_details()
