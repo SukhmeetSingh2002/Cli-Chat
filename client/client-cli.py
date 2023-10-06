@@ -144,45 +144,7 @@ def on_chat_message(data):
 
 ########## MAIN CODE ##########
 
-def register_new_user(sio):
-    global username
-    global isUsernameSet
-    # Prompt the user to enter a username
-    username = Prompt.ask("Enter a username")
-    print(f"Your username is: {username}")
 
-    # ask valid email
-    email = Prompt.ask("Enter a valid email")
-    print(f"Your email is: {email}")
-
-    # ask password
-    password = Prompt.ask("Enter a password", password=True)
-    print(f"Your password is: {password}")
-
-    # Send the username to the server
-    isUsernameSet = UsernameState.WAITING
-    sio.emit("setUsername", {
-             "username": username, "password": password, "email": email, "action": "register"})
-
-    while isUsernameSet == UsernameState.WAITING:
-        time.sleep(0.1)
-    return username
-
-
-def login_user(sio):
-    global username
-    global isUsernameSet
-    username = Prompt.ask("Enter your username")
-    email = Prompt.ask("Enter your email")
-    password = Prompt.ask("Enter your password", password=True)
-
-    isUsernameSet = UsernameState.WAITING
-    sio.emit("setUsername", {
-             "email": email, "password": password, "action": "login", "username": username})
-
-    while isUsernameSet == UsernameState.WAITING:
-        time.sleep(0.1)
-    return username
 
 
 def getContacts():
