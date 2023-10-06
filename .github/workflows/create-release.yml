@@ -26,7 +26,7 @@ jobs:
                   pip install -r requirements.txt
                   pyinstaller --onefile client-cli.py
             # rename binary if using windows
-            - name: Rename Binary
+            - name: Rename Binary Windows
               if: matrix.os == 'windows-latest'
               run: |
                 echo "Hello ${{ matrix.os }}!"
@@ -35,7 +35,7 @@ jobs:
                 ls -laR
                 ren client-cli.exe client-cli-${{ matrix.os }}.exe
             # rename binary if using ubuntu
-            - name: Rename Binary
+            - name: Rename Binary Ubuntu
               if: matrix.os == 'ubuntu-latest'
               run: |
                 cd client
@@ -61,7 +61,6 @@ jobs:
                   files: |
                       client-cli-${{ matrix.os }}
                   tag_name: ${{ github.ref }}
-                  release_name: Release ${{ github.ref }}
                   body: |
                       Release ${{ github.ref }}
                   draft: false
