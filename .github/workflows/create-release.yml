@@ -19,40 +19,35 @@ jobs:
               uses: actions/setup-python@v2
               with:
                   python-version: ${{ matrix.python-version }}
-            # change directory to client and confirm using ls
-            - name: Change Directory
+            - name: Install Dependencies and Build Binary
               run: |
-                  ls -la
                   cd client
-                  ls -la
-            # install dependencies
-            - name: Install Dependencies
-              run: |
-                  ls -la
                   pip install --upgrade pip
                   pip install -r requirements.txt
-            - name: Build Binary
-              run: pyinstaller --onefile client-cli.py
-            # change directory to dist, recursive ls, and confirm binary exists
-            - name: Change Directory
-              run: |
-                  cd dist
-                  ls -laR
+                  pyinstaller --onefile client-cli.py
             # rename binary if using windows
             - name: Rename Binary
               if: ${{ matrix.os }} == 'windows-latest'
-              run: ren client-cli.exe client-cli-${{ matrix.os }}.exe
+              run: |
+                cd client
+                cd dist
+                ls -laR
+                ren client-cli.exe client-cli-${{ matrix.os }}.exe
             # rename binary if using ubuntu
             - name: Rename Binary
               if: ${{ matrix.os }} == 'ubuntu-latest'
-              run: mv client-cli client-cli-${{ matrix.os }}
+              run: |
+                cd client
+                cd dist
+                ls -laR
+                mv client-cli client-cli-${{ matrix.os }}
           
             # upload binary to artifacts
             - name: Upload Binary
               uses: actions/upload-artifact@v3
               with:
                   name: client-cli-${{ matrix.os }}
-                  path: client-cli-${{ matrix.os }}
+                  path: client/dist/client-cli-${{ matrix.os }}
 
             # upload binary to github release
             - name: Create Release
