@@ -32,9 +32,9 @@ jobs:
                 echo "Hello ${{ matrix.os }}!"
                 cd client
                 cd dist
-                ls -laR
+                ls
                 ren client-cli.exe client-cli-${{ matrix.os }}.exe
-                ls -laR
+                ls
             # rename binary if using ubuntu
             - name: Rename Binary Ubuntu
               if: matrix.os == 'ubuntu-latest'
@@ -51,23 +51,24 @@ jobs:
               uses: actions/upload-artifact@v3
               with:
                   name: client-cli-${{ matrix.os }}
-                  path: client/dist/client-cli-${{ matrix.os }}
+                  path: client/dist/client-cli-${{ matrix.os }}*
 
-            # upload binary to github release
-            - name: Create Release
-              id: create_release
-              uses: softprops/action-gh-release@v1
-              if: startsWith(github.ref, 'refs/tags/v')
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  files: |
-                      ls -laR
-                      client-cli-${{ matrix.os }}
-                  tag_name: ${{ github.ref }}
-                  body: |
-                      Release ${{ github.ref }}
-                  draft: false
-                  prerelease: false
-                  
-          
+    create_release:
+      name: Create Release
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+        - name: Create Release
+          id: create_release
+          uses: ncipollo/release-action@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            artifacts: "client-cli-ubuntu-latest"
+            tag: ${{ github.ref }}
+            body: |
+              Release ${{ github.ref }}
+            draft: false
+            prerelease: false
+                    
+            
