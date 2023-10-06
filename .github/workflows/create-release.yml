@@ -27,7 +27,10 @@ jobs:
                   ls -la
             # install dependencies
             - name: Install Dependencies
-              run: pip install -r requirements.txt
+              run: |
+                  ls -la
+                  pip install --upgrade pip
+                  pip install -r requirements.txt
             - name: Build Binary
               run: pyinstaller --onefile client-cli.py
             # change directory to dist, recursive ls, and confirm binary exists
