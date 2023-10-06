@@ -1,5 +1,9 @@
 # Server and Client CLI Project
 
+[![CodeQL](https://github.com/SukhmeetSingh2002/Cli-Chat/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/SukhmeetSingh2002/Cli-Chat/actions/workflows/github-code-scanning/codeql)
+[![Build Binary Release](https://github.com/SukhmeetSingh2002/Cli-Chat/actions/workflows/create-release.yml/badge.svg)](https://github.com/SukhmeetSingh2002/Cli-Chat/actions/workflows/create-release.yml)
+
+
 This project consists of a Node.js server and a client CLI written in Python. The server provides a set of APIs that the client can use to perform various operations.
 
 ## Getting Started
