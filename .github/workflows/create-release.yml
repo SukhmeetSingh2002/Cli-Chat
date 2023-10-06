@@ -19,6 +19,10 @@ jobs:
               uses: actions/setup-python@v2
               with:
                   python-version: ${{ matrix.python-version }}
+            # change directory to client
+            - name: Change Directory
+              run: cd client
+            # install dependencies
             - name: Install Dependencies
               run: pip install -r requirements.txt
             - name: Build Binary
