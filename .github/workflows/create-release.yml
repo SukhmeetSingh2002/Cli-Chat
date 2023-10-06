@@ -64,7 +64,7 @@ jobs:
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           with:
-            artifacts: "client-cli-ubuntu-latest"
+            artifacts: "client-cli-ubuntu-latest.zip,client-cli-windows-latest.zip"
             tag: ${{ github.ref }}
             body: |
               Release ${{ github.ref }}
