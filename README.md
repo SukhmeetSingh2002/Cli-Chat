@@ -24,7 +24,7 @@ The `server.js` file is the main file for the Node.js server in this project. It
 
 The `client-cli.py` file is a command-line interface (CLI) for the client in this project. It is written in Python and communicates with the server over a network using the APIs provided by the server.
 
-## Usage
+### Usage
 
 To use the client CLI, run `python client-cli.py` in the `client` directory. The CLI will prompt you for input and provide output based on the commands you enter.
 
@@ -36,7 +36,7 @@ The following commands are available in the client CLI:
 - `get_message_history`: Gets the message history for a contact.
 - `exit`: Exits the client CLI.
 
-# Authentication in the Client CLI
+### Authentication in the Client CLI
 
 The client CLI uses Firebase for authentication. When you run the `python client-cli.py` command, the CLI will open a URL in your default web browser that prompts you to log in to the Firebase authentication service.
 
@@ -45,33 +45,25 @@ Once you have logged in, Firebase will redirect you to a success or a failure pa
 After you have successfully authenticated, the client CLI will display your username and a message indicating that you are logged in. The authentication token will be stored in a file called `.clientCredentials` in the `home` directory.
 
 
-## Building from Source
 
-To build the client CLI from source, you'll need to have Python 3 installed on your machine. Then, follow these steps:
-
-1. Clone the repository to your local machine.
-2. Install the necessary dependencies by running `pip install -r requirements.txt` in the `client` directory.
-3. Run `python setup.py build` in the `client` directory.
-4. The built binaries will be located in the `dist` directory.
-
-## License
+# License
 
 This project is licensed under the MIT License. See the `LICENSE` file for more information.
 
-### Usage
+# Usage
 
 To use the client CLI, run `python client-cli.py` in the `client` directory. The CLI will prompt you for input and provide output based on the commands you enter.
 
-### Building from Source
+# Building from Source
 
 To build the client CLI from source, you'll need to have Python 3 installed on your machine. Then, follow these steps:
 
 1. Clone the repository to your local machine.
 2. Install the necessary dependencies by running `pip install -r requirements.txt` in the `client` directory.
-3. Run `python setup.py build` in the `client` directory.
+3. Run `pyinstaller --onefile client-cli.py` in the `client` directory.
 4. The built binaries will be located in the `dist` directory.
 
-## Contributing
+# Contributing
 
 If you'd like to contribute to this project, please follow these steps:
 
@@ -81,6 +73,6 @@ If you'd like to contribute to this project, please follow these steps:
 4. Push your changes to your fork.
 5. Create a pull request.
 
-## License
+# License
 
 This project is licensed under the MIT License. See the `LICENSE` file for more information.
