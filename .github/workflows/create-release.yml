@@ -50,7 +50,7 @@ jobs:
             - name: Upload Binary
               uses: actions/upload-artifact@v3
               with:
-                  name: client-cli-${{ matrix.os }}
+                  name: Build
                   path: client/dist/client-cli-${{ matrix.os }}*
 
     create_release:
@@ -58,13 +58,22 @@ jobs:
       needs: build
       runs-on: ubuntu-latest
       steps:
+        - name: Download 
+          uses: actions/download-artifact@v3
+          with:
+            name: Build
+            path: build
+        - name: Zip files
+          run: |
+            ls
+            zip -r build.zip build/
         - name: Create Release
           id: create_release
           uses: ncipollo/release-action@v1
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           with:
-            artifacts: "client-cli-ubuntu-latest.zip,client-cli-windows-latest.zip"
+            artifacts: "build.zip"
             tag: ${{ github.ref }}
             body: |
               Release ${{ github.ref }}
