@@ -19,17 +19,22 @@ jobs:
               uses: actions/setup-python@v2
               with:
                   python-version: ${{ matrix.python-version }}
-            # change directory to client
+            # change directory to client and confirm using ls
             - name: Change Directory
-              run: cd client
+              run: |
+                  ls -la
+                  cd client
+                  ls -la
             # install dependencies
             - name: Install Dependencies
               run: pip install -r requirements.txt
             - name: Build Binary
               run: pyinstaller --onefile client-cli.py
-            # change directory to dist
+            # change directory to dist, recursive ls, and confirm binary exists
             - name: Change Directory
-              run: cd dist
+              run: |
+                  cd dist
+                  ls -laR
             # rename binary if using windows
             - name: Rename Binary
               if: ${{ matrix.os }} == 'windows-latest'
