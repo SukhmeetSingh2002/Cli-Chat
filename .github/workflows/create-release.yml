@@ -1,0 +1,62 @@
+name: Build Binary Release
+
+on:
+    push:
+        tags:
+            - v*
+
+jobs:
+    build:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+                python-version: [3.6, 3.7, 3.8]
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v2
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v2
+              with:
+                  python-version: ${{ matrix.python-version }}
+            - name: Install Dependencies
+              run: pip install -r requirements.txt
+            - name: Build Binary
+              run: pyinstaller --onefile client-cli.py
+            # change directory to dist
+            - name: Change Directory
+              run: cd dist
+            # rename binary if using windows
+            - name: Rename Binary
+              if: ${{ matrix.os }} == 'windows-latest'
+              run: ren client-cli.exe client-cli-${{ matrix.os }}.exe
+            # rename binary if using ubuntu
+            - name: Rename Binary
+              if: ${{ matrix.os }} == 'ubuntu-latest'
+              run: mv client-cli client-cli-${{ matrix.os }}
+          
+            # upload binary to artifacts
+            - name: Upload Binary
+              uses: actions/upload-artifact@v3
+              with:
+                  name: client-cli-${{ matrix.os }}
+                  path: client-cli-${{ matrix.os }}
+
+            # upload binary to github release
+            - name: Create Release
+              id: create_release
+              uses: softprops/action-gh-release@v1
+              if: startsWith(github.ref, 'refs/tags/v')
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  files: |
+                      client-cli-${{ matrix.os }}
+                  tag_name: ${{ github.ref }}
+                  release_name: Release ${{ github.ref }}
+                  body: |
+                      Release ${{ github.ref }}
+                  draft: false
+                  prerelease: false
+                  
+          

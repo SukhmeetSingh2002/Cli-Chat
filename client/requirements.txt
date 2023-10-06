@@ -4,7 +4,6 @@ certifi==2023.7.22
 charset-normalizer==2.1.1
 commonmark==0.9.1
 idna==3.4
-netifaces==0.10.6
 prompt-toolkit==3.0.39
 Pygments==2.15.0
 pyinstaller==5.13.0
@@ -13,7 +12,6 @@ python-engineio==4.3.4
 python-socketio==5.7.2
 requests==2.31.0
 rich==12.6.0
-socketio==0.2.1
 typing-extensions==4.4.0
 urllib3==1.26.17
 wcwidth==0.2.6
