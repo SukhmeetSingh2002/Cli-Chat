@@ -76,7 +76,9 @@ jobs:
             artifacts: "build.zip"
             tag: ${{ github.ref_name }}
             body: |
-              Release ${{ github.ref_name }}
+              [Auto] Release ${{ github.ref_name }}
+        
+              This release was automatically generated.
             draft: false
             prerelease: false
                     
@@ -98,14 +100,36 @@ jobs:
         - name: Commit Changes
           uses: EndBug/add-and-commit@v9
           with:
-            message: "Update version to ${{ github.ref_name }}"
+            message: "[Automated] Update version to ${{ github.ref_name }}"
             add: "version.txt"
-            new_branch: "update-version-${{ github.ref_name }}"
+            new_branch: "[Automated] update-version-${{ github.ref_name }}"
             cwd: "cli-web/public"
             push: true
-        # - name: Push Changes
-        #   uses: ad-m/github-push-action@v0.6.0
-        #   with:
-        #     github_token: ${{ secrets.PUSH_TOKEN }}
-        #     branch: update-version-${{ github.ref_name }}
-        #     directory: cli-web/public
+        - name: Create Pull Request
+          uses: peter-evans/create-pull-request@v3
+          with:
+            token: ${{ secrets.PUSH_TOKEN }}
+            commit-message: "[Automated] Update version to ${{ github.ref_name }}"
+            branch: "[Automated] update-version-${{ github.ref_name }}"
+            title: "[Automated] Update version to ${{ github.ref_name }}"
+            body: |
+              **Automated Version Update**
+
+              This pull request automates the update of the version number to ${{ github.ref_name }}.
+
+              - **Change**: Update version to ${{ github.ref_name }}
+              - **Reason**: To reflect the latest release.
+
+              **Technical Details:**
+
+              - The version number is automatically extracted and updated from the source.
+              - Automated checks ensure the integrity of the update process.
+
+              This change is part of our continuous integration and deployment pipeline to maintain code consistency and reliability.
+
+              Link to the [release](https://github.com/SukhmeetSingh2002/cli-chat/releases/tag/${{ github.ref_name }}).
+              Link to the [workflow](https://github.com/SukhmeetSingh2002/cli-chat/actions/runs/${{ github.run_id }}).
+            base: "main"
+            draft: false
+            labels: "automated-version-update,auto-merge"
+        
