@@ -101,4 +101,11 @@ jobs:
             message: "Update version to ${{ github.ref_name }}"
             add: "cli-web/public/version.txt"
             new_branch: "update-version-${{ github.ref_name }}"
+            cwd: "cli-web/public"
             push: true
+        # - name: Push Changes
+        #   uses: ad-m/github-push-action@v0.6.0
+        #   with:
+        #     github_token: ${{ secrets.PUSH_TOKEN }}
+        #     branch: update-version-${{ github.ref_name }}
+        #     directory: cli-web/public
