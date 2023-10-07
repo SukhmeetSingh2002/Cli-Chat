@@ -74,10 +74,31 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           with:
             artifacts: "build.zip"
-            tag: ${{ github.ref }}
+            tag: ${{ github.ref_name }}
             body: |
-              Release ${{ github.ref }}
+              Release ${{ github.ref_name }}
             draft: false
             prerelease: false
                     
-            
+    update_version:
+      name: Update Version
+      needs: create_release
+      runs-on: ubuntu-latest
+      steps:
+        - name: Download client-cli
+          uses: actions/checkout@v4
+          with:
+            repository: SukhmeetSingh2002/cli-chat-web
+            path: cli-web
+            token: ${{ secrets.PUSH_TOKEN }}
+        - name: Update Version
+          run: |
+            cd cli-web/public
+            echo ${{ github.ref_name }} > version.txt
+        - name: Commit Changes
+          uses: EndBug/add-and-commit@v9
+          with:
+            message: "Update version to ${{ github.ref_name }}"
+            add: "cli-web/public/version.txt"
+            new_branch: "update-version-${{ github.ref_name }}"
+            push: true
