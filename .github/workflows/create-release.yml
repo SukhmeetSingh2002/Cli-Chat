@@ -99,7 +99,7 @@ jobs:
           uses: EndBug/add-and-commit@v9
           with:
             message: "Update version to ${{ github.ref_name }}"
-            add: "cli-web/public/version.txt"
+            add: "version.txt"
             new_branch: "update-version-${{ github.ref_name }}"
             cwd: "cli-web/public"
             push: true
