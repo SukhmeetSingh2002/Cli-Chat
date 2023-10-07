@@ -102,7 +102,7 @@ jobs:
           with:
             message: "[Automated] Update version to ${{ github.ref_name }}"
             add: "version.txt"
-            new_branch: "[Automated] update-version-${{ github.ref_name }}"
+            new_branch: "update-version-${{ github.ref_name }}"
             cwd: "cli-web/public"
             push: true
         - name: Create Pull Request
@@ -110,7 +110,7 @@ jobs:
           with:
             token: ${{ secrets.PUSH_TOKEN }}
             commit-message: "[Automated] Update version to ${{ github.ref_name }}"
-            branch: "[Automated] update-version-${{ github.ref_name }}"
+            branch: "update-version-${{ github.ref_name }}"
             title: "[Automated] Update version to ${{ github.ref_name }}"
             body: |
               **Automated Version Update**
