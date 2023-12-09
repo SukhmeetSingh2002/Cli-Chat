@@ -6,7 +6,7 @@ commonmark==0.9.1
 idna==3.4
 prompt-toolkit==3.0.39
 Pygments==2.15.0
-pyinstaller==5.13.0
+pyinstaller==5.13.1
 pyinstaller-hooks-contrib==2023.5
 python-engineio==4.3.4
 python-socketio==5.7.2
