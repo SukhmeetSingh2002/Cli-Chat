@@ -340,3 +340,8 @@ io.on("connection", async (socket) => {
 server.listen(process.env.PORT || 3000, () => {
   console.log(`Server started on port ${server.address().port} :)`);
 });
+
+app.get("/", (req, res) => {
+  console.log("root");
+  res.send("Welcome to the root API endpoint!").status(200);
+});

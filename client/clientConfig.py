@@ -29,7 +29,7 @@ def create_config():
 
     config["SocketIO"] = {
         # "connect_url": "https://clichat.azurewebsites.net",
-        "connect_url": "http://localhost:3000",
+        "connect_url": "https://xypher-server.onrender.com",
         "wait_timeout": "10"
     }
 
