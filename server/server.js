@@ -3,6 +3,7 @@ const http = require("http");
 const socketIO = require("socket.io");
 const winston = require("winston");
 const database = require("./firebaseTest").database;
+const bucket = require("./firebaseTest").bucket;
 const { generateChatId } = require("./utils/generateChatId");
 const auth = require("./firebaseTest").auth;
 
@@ -220,6 +221,104 @@ io.use(async (socket, next) => {
   next();
 });
 
+const handleSendFile = (socket) => async (data) => {
+  const { from, to, file,filename,content_type } = data;
+  const chatId = generateChatId(from.username, to);
+  const fileRef = bucket.file(`chat_files/${chatId}/${filename}`);
+
+
+  try {
+    await fileRef.save(file, {
+      metadata: {
+        contentType: content_type,
+      },
+    });
+
+    // file url
+    // const [url] = await fileRef.getSignedUrl({
+    //   action: "read",
+    //   expires: "12-11-2023",
+    // });
+
+    
+    
+    const sendTime = new Date().toLocaleString();
+    const msg = `FILE SENT: ${filename}`;
+    storeMessage(to, from.username, msg, sendTime);
+    
+    socket.emit("fromServerMessage", {
+      from: "Server",
+      msg: "File uploaded successfully",
+    });
+
+  } catch (error) {
+    socket.emit("fromServerMessage", {
+      from: "Server",
+      msg: "Error: File upload failed",
+    });
+
+    console.log("error: ", error);
+  }
+}
+
+const handleGetFilesList = (socket) => async (data) => {
+  const { from, to } = data;
+
+  const chatId = generateChatId(from, to.username);
+  const fileRef = bucket.file(`chat_files/${chatId}`);
+
+  try {
+    const [files] = await bucket.getFiles({ prefix: `chat_files/${chatId}/` });
+
+
+    const filesList = files.map((file) => file.name.replace(`chat_files/${chatId}/`, ""));
+    socket.emit("fromServerMessage", {
+      from: "Server",
+      msg: filesList,
+    });
+  } catch (error) {
+    socket.emit("fromServerMessage", {
+      from: "Server",
+      msg: "Error: Get files list failed",
+    });
+
+    console.log("error: ", error);
+  }
+}
+
+const handleGetFile = (socket) => async (data) => {
+  const { from, to, filename } = data;
+
+  const chatId = generateChatId(from, to.username);
+  const fileRef = bucket.file(`chat_files/${chatId}/${filename}`);
+
+  try {
+    const [file] = await fileRef.download();
+    const fileData = file.toString();
+
+
+    socket.emit("fromServerMessage", {
+      from: "Server",
+      msg: "File downloaded successfully",
+    });
+
+    socket.emit("fileReceived", {
+      from: from,
+      file: fileData,
+      filename: filename,
+    });
+
+
+  } catch (error) {
+    socket.emit("fromServerMessage", {
+      from: "Server",
+      msg: "Error: Get file failed",
+    });
+
+    console.log("error: ", error);
+  }
+}
+
 // Socket.io event handlers
 io.on("connection", async (socket) => {
   logger.info("A user connected");
@@ -233,6 +332,9 @@ io.on("connection", async (socket) => {
   socket.on("sendTo", handleSendTo(socket));
   socket.on("connectTo", handleConnectTo(socket));
   socket.on("getMessages", handleGetMessages(socket));
+  socket.on("sendFile", handleSendFile(socket));
+  socket.on("getAllFiles", handleGetFilesList(socket));
+  socket.on("getFile", handleGetFile(socket));
 });
 
 server.listen(process.env.PORT || 3000, () => {

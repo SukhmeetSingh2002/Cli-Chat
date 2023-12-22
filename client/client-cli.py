@@ -1,6 +1,8 @@
 from rich.traceback import install
 import time
 import socketio
+import argparse
+import base64
 
 from rich.console import Console
 from rich.prompt import Prompt
@@ -24,6 +26,7 @@ import token_port
 from updateCheck import main as update_main
 from clientConfig import create_config
 from os import path
+from os import makedirs
 
 logs_directory = path.join(path.expanduser("~"), ".cliChatConfig")
 
@@ -128,6 +131,15 @@ def on_message(data):
     # didServerRespond = UsernameState.SET
     console.print(f"\n[blue]{data['from']}[/blue]: {data['msg']}")
 
+# evenet when server needs to send important information to the user
+@sio.on("fromServerMessage")
+def on_from_server_message(data):
+    console.print(f"\n[bright_red]from server: [/bright_red]{data['msg']}")
+    global didServerRespond
+    didServerRespond = UsernameState.SET
+
+
+
 # When a user sends a message to another user we need to display it if the user is connected to the other user
 
 
@@ -141,6 +153,26 @@ def on_chat_message(data):
         console.print(
             f"\n[blue]{data['from']['username']}[/blue] sent you a message. Type 'connect {data['from']['username']}' to connect to them")
 
+# When a user sends a file to another user we need to display it if the user is connected to the other user
+@sio.on("fileReceived")
+def on_file_received(data):
+    # decode the file data
+    file_data = base64.b64decode(data["file"].encode('utf-8'))
+
+    download_directory = path.join(path.expanduser("~"), "cliChatDownloads")
+
+    # create firecectory for user if it doesn't exist
+    directory = path.join(download_directory, data["from"])
+    if not path.exists(directory):
+        makedirs(directory)
+
+    file_download_path = path.join(directory, data["filename"])
+
+    # save the file to disk to ~/cliChatDownloads
+    with open(file_download_path, 'wb') as f:
+        f.write(file_data)
+
+        
 
 ########## MAIN CODE ##########
 
@@ -409,7 +441,45 @@ def main():
     sio.disconnect()
 
 
-if __name__ == "__main__":
+
+def send_file(file_path, recipient):
+    with open(file_path, 'rb') as f:
+        file_data = f.read()
+
+
+    file_extension = path.splitext(file_path)[1]
+
+        # Map file extensions to common content types (you can expand this list)
+    content_type_map = {
+        '.jpg': 'image/jpeg',
+        '.png': 'image/png',
+        '.pdf': 'application/pdf',
+        '.doc': 'application/msword',
+        '.txt': 'text/plain',
+    }
+
+    # get the content type
+    content_type = content_type_map.get(file_extension, 'application/octet-stream')
+
+    # encode the file data
+    file_data = base64.b64encode(file_data).decode('utf-8')
+
+
+    # send the file to the server
+    sio.emit("sendFile", {"to": recipient, "file": file_data, "from": username, "filename": path.basename(file_path), "content_type": content_type})
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='CLI Chat Client, a command line chat application')
+    parser.add_argument('-s','--send-file', dest='file_path', type=str, help='Path to the file to send')
+    parser.add_argument('-r','--recipient', dest='recipient', type=str, help='The recipient of the file')
+    parser.add_argument('-g','--get-file', dest='file_list', action='store_true', help='Get the list of files')
+    parser.add_argument('-d','--download-file', dest='file_name', type=str, help='Download the file with the given name')
+    parser.add_argument('-c','--get-contacts', dest='get_contacts', action='store_true', help='Get the list of contacts')
+    parser.add_argument('-u','--usernameFriend', dest='usernameFriend', type=str, help='The username of the user to get the file from')
+    args = parser.parse_args()
+
+    print("Use the -h option for help")
+
     # create the config file if it doesn't exist
     create_config()
 
@@ -431,4 +501,93 @@ if __name__ == "__main__":
         print("Error: ", e)
         token_port.save_token({"stsTokenManager": ""})  # delete token
         exit()
+
+    if args.file_path is not None and args.recipient is not None:
+        # send the file to the recipient
+        send_file(args.file_path, args.recipient)
+
+        # wait for the server to respond
+        while didServerRespond == UsernameState.UNSET:
+            time.sleep(0.1)
+
+        sio.disconnect()
+        exit()
+    elif args.file_path is not None and args.recipient is None:
+        print("Error: recipient not specified")
+        sio.disconnect()
+        exit()
+    elif args.file_path is None and args.recipient is not None:
+        print("Error: file path not specified")
+        sio.disconnect()
+        exit()
+
+
+    if args.file_list:
+
+        if args.usernameFriend is None:
+
+            # get the list of contacts
+            sio.emit("getContacts", username)
+
+            # wait for the server to respond
+            while not isContactSet:
+                time.sleep(0.1)
+
+            # print the contacts
+            show_contacts(console, contacts)
+
+            from_user = Prompt.ask("Enter the name of the contact you want to get files from:", choices=[
+                                    contact["name"] for contact in contacts.values()])
+
+            # find the username of the contact
+            for contact in contacts.values():
+                if contact["name"] == from_user:
+                    from_user = contact["username"]
+                    break
+
+        else:
+            from_user = args.usernameFriend
+
+
+
+        console.print(f"Getting files from [blue]{from_user}[/blue]")
+        # print {"to": username, "from": from_user}
+        console.print(f"Getting files from [blue]{from_user}[/blue] to [blue]{username}[/blue]")
+
+        # get the list of files
+        sio.emit("getAllFiles", {"to": username, "from": from_user})
+
+        # wait for the server to respond
+        while didServerRespond == UsernameState.UNSET:
+            time.sleep(0.1)
+
+        sio.disconnect()
+        exit()
+
+    if args.file_name is not None and args.usernameFriend is not None:
+        # download the file
+        sio.emit("getFile", {"from": args.usernameFriend, "filename": args.file_name, "to": username})
+
+        # wait for the server to respond
+        while didServerRespond == UsernameState.UNSET:
+            time.sleep(0.1)
+            
+
+        sio.disconnect()
+        exit()
+
+    if args.get_contacts:
+        # get the list of contacts
+        sio.emit("getContacts", username)
+
+        # wait for the server to respond
+        while not isContactSet:
+            time.sleep(0.1)
+
+        # print the contacts
+        show_contacts(console, contacts)
+
+        sio.disconnect()
+        exit()
+
     main()

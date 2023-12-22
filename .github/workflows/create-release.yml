@@ -1,135 +1,123 @@
 name: Build Binary Release
 
 on:
-    push:
-        tags:
-            - v*
+  push:
+    tags:
+      - v*
 
 jobs:
-    build:
-        runs-on: ${{ matrix.os }}
-        strategy:
-            matrix:
-                os: [ubuntu-latest, windows-latest]
-                python-version: [3.8]
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v2
-            - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v2
-              with:
-                  python-version: ${{ matrix.python-version }}
-            - name: Install Dependencies and Build Binary
-              run: |
-                  cd client
-                  pip install --upgrade pip
-                  pip install -r requirements.txt
-                  pyinstaller --onefile client-cli.py
-            # rename binary if using windows
-            - name: Rename Binary Windows
-              if: matrix.os == 'windows-latest'
-              run: |
-                echo "Hello ${{ matrix.os }}!"
-                cd client
-                cd dist
-                ls
-                ren client-cli.exe client-cli-${{ matrix.os }}.exe
-                ls
-            # rename binary if using ubuntu
-            - name: Rename Binary Ubuntu
-              if: matrix.os == 'ubuntu-latest'
-              run: |
-                echo "Hello ${{ matrix.os }}!"
-                cd client
-                cd dist
-                ls -laR
-                mv client-cli client-cli-${{ matrix.os }}
-                ls -laR
-          
-            # upload binary to artifacts
-            - name: Upload Binary
-              uses: actions/upload-artifact@v3
-              with:
-                  name: Build
-                  path: client/dist/client-cli-${{ matrix.os }}*
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.8]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Dependencies and Build Binary
+        run: |
+          cd client
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pyinstaller --onefile client-cli.py
+      # rename binary if using windows
+      - name: Rename Binary Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          echo "Hello ${{ matrix.os }}!"
+          cd client
+          cd dist
+          ls
+          ren client-cli.exe client-cli-${{ matrix.os }}.exe
+          ls
+      # rename binary if using ubuntu
+      - name: Rename Binary Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "Hello ${{ matrix.os }}!"
+          cd client
+          cd dist
+          ls -laR
+          mv client-cli client-cli-${{ matrix.os }}
+          ls -laR
+      # rename binary if using macOS
+      - name: Rename Binary macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          echo "Hello ${{ matrix.os }}!"
+          cd client
+          cd dist
+          ls
+          mv client-cli client-cli-${{ matrix.os }}
+          ls
 
-    create_release:
-      name: Create Release
-      needs: build
-      runs-on: ubuntu-latest
-      steps:
-        - name: Download 
-          uses: actions/download-artifact@v3
-          with:
-            name: Build
-            path: build
-        - name: Zip files
-          run: |
-            ls
-            zip -r build.zip build/
-        - name: Create Release
-          id: create_release
-          uses: ncipollo/release-action@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          with:
-            artifacts: "build.zip"
-            tag: ${{ github.ref_name }}
-            body: |
-              [Auto] Release ${{ github.ref_name }}
+      # upload binary to artifacts
+      - name: Upload Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: Build
+          path: client/dist/client-cli-${{ matrix.os }}*
+
+  create_release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download 
+        uses: actions/download-artifact@v3
+        with:
+          name: Build
+          path: build
+      - name: Zip files
+        run: |
+          ls
+          zip -r build.zip build/
+      - name: Create Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          artifacts: "build.zip"
+          tag: ${{ github.ref_name }}
+          body: |
+            [Auto] Release ${{ github.ref_name }}
         
-              This release was automatically generated.
-            draft: false
-            prerelease: false
+            This release was automatically generated.
+          draft: false
+          prerelease: false
                     
-    update_version:
-      name: Update Version
-      needs: create_release
-      runs-on: ubuntu-latest
-      steps:
-        - name: Download client-cli
-          uses: actions/checkout@v4
-          with:
-            repository: SukhmeetSingh2002/cli-chat-web
-            path: cli-web
-            token: ${{ secrets.PUSH_TOKEN }}
-        - name: Update Version
-          run: |
-            cd cli-web/public
-            echo ${{ github.ref_name }} > version.txt
-        - name: Commit Changes
-          uses: EndBug/add-and-commit@v9
-          with:
-            message: "[Automated] Update version to ${{ github.ref_name }}"
-            add: "version.txt"
-            new_branch: "update-version-${{ github.ref_name }}"
-            cwd: "cli-web/public"
-            push: true
-        - name: Create Pull Request
-          uses: peter-evans/create-pull-request@v3
-          with:
-            token: ${{ secrets.PUSH_TOKEN }}
-            commit-message: "[Automated] Update version to ${{ github.ref_name }}"
-            branch: "update-version-${{ github.ref_name }}"
-            title: "[Automated] Update version to ${{ github.ref_name }}"
-            body: |
-              **Automated Version Update**
-
-              This pull request automates the update of the version number to ${{ github.ref_name }}.
-
-              - **Change**: Update version to ${{ github.ref_name }}
-              - **Reason**: To reflect the latest release.
-
-              **Technical Details:**
-
-              - The version number is automatically extracted and updated from the source.
-              - Automated checks ensure the integrity of the update process.
-
-              This change is part of our continuous integration and deployment pipeline to maintain code consistency and reliability.
-
-              Link to the [release](https://github.com/SukhmeetSingh2002/cli-chat/releases/tag/${{ github.ref_name }}).
-              Link to the [workflow](https://github.com/SukhmeetSingh2002/cli-chat/actions/runs/${{ github.run_id }}).
-            base: "main"
-            draft: false
-            labels: "automated-version-update,auto-merge"
-        
+  update_version:
+    name: Update Version
+    needs: create_release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download client-cli
+        uses: actions/checkout@v4
+        with:
+          repository: SukhmeetSingh2002/cli-chat-web
+          path: cli-web
+          token: ${{ secrets.PUSH_TOKEN }}
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: Build
+          path: cli-web/public
+      - name: Update Version
+        run: |
+          cd cli-web/public
+          echo ${{ github.ref_name }} > version.txt
+      - name: Commit Changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: "[Automated] Update version to ${{ github.ref_name }}"
+          add: "version.txt"
+          new_branch: "update-version-${{ github.ref_name }}"
+          cwd: "cli-web/public"
+          push: true
+      
