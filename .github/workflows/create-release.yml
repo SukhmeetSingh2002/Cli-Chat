@@ -33,7 +33,7 @@ jobs:
           cd client
           cd dist
           ls
-          ren client-cli.exe client-cli-${{ matrix.os }}.exe
+          ren client-cli.exe xypher-${{ matrix.os }}.exe
           ls
       # rename binary if using ubuntu
       - name: Rename Binary Ubuntu
@@ -43,7 +43,7 @@ jobs:
           cd client
           cd dist
           ls -laR
-          mv client-cli client-cli-${{ matrix.os }}
+          mv client-cli xypher-${{ matrix.os }}
           ls -laR
       # rename binary if using macOS
       - name: Rename Binary macOS
@@ -53,7 +53,7 @@ jobs:
           cd client
           cd dist
           ls
-          mv client-cli client-cli-${{ matrix.os }}
+          mv client-cli xypher-${{ matrix.os }}
           ls
 
       # upload binary to artifacts
@@ -61,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Build
-          path: client/dist/client-cli-${{ matrix.os }}*
+          path: client/dist/xypher-${{ matrix.os }}*
 
   create_release:
     name: Create Release
@@ -107,7 +107,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: Build
-          path: cli-web/public
+          path: cli-web/public/download
       - name: Update Version
         run: |
           cd cli-web/public
