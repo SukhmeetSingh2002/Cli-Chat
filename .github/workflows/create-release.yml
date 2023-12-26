@@ -24,44 +24,44 @@ jobs:
           cd client
           pip install --upgrade pip
           pip install -r requirements.txt
-          pyinstaller --onefile client-cli.py
+          pyinstaller client-cli.py --icon icon.ico --name xypher
       # rename binary if using windows
-      - name: Rename Binary Windows
-        if: matrix.os == 'windows-latest'
-        run: |
-          echo "Hello ${{ matrix.os }}!"
-          cd client
-          cd dist
-          ls
-          ren client-cli.exe xypher-${{ matrix.os }}.exe
-          ls
-      # rename binary if using ubuntu
-      - name: Rename Binary Ubuntu
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          echo "Hello ${{ matrix.os }}!"
-          cd client
-          cd dist
-          ls -laR
-          mv client-cli xypher-${{ matrix.os }}
-          ls -laR
-      # rename binary if using macOS
-      - name: Rename Binary macOS
-        if: matrix.os == 'macos-latest'
-        run: |
-          echo "Hello ${{ matrix.os }}!"
-          cd client
-          cd dist
-          ls
-          mv client-cli xypher-${{ matrix.os }}
-          ls
+      # - name: Rename Binary Windows
+      #   if: matrix.os == 'windows-latest'
+      #   run: |
+      #     echo "Hello ${{ matrix.os }}!"
+      #     cd client
+      #     cd dist
+      #     ls
+      #     ren client-cli.exe xypher-${{ matrix.os }}.exe
+      #     ls
+      # # rename binary if using ubuntu
+      # - name: Rename Binary Ubuntu
+      #   if: matrix.os == 'ubuntu-latest'
+      #   run: |
+      #     echo "Hello ${{ matrix.os }}!"
+      #     cd client
+      #     cd dist
+      #     ls -laR
+      #     mv client-cli xypher-${{ matrix.os }}
+      #     ls -laR
+      # # rename binary if using macOS
+      # - name: Rename Binary macOS
+      #   if: matrix.os == 'macos-latest'
+      #   run: |
+      #     echo "Hello ${{ matrix.os }}!"
+      #     cd client
+      #     cd dist
+      #     ls
+      #     mv client-cli xypher-${{ matrix.os }}
+      #     ls
 
       # upload binary to artifacts
       - name: Upload Binary
         uses: actions/upload-artifact@v3
         with:
           name: Build
-          path: client/dist/xypher-${{ matrix.os }}*
+          path: client/dist/*
 
   create_release:
     name: Create Release
