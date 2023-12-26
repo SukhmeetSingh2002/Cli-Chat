@@ -29,6 +29,7 @@ from updateCheck import main as update_main
 from clientConfig import create_config
 from os import path
 from os import makedirs
+from sys import exit
 
 logs_directory = path.join(path.expanduser("~"), ".cliChatConfig")
 
