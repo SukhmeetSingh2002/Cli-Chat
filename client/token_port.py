@@ -71,20 +71,22 @@ def get_saved_token():
         return None
 
 def redirect_to_auth_page(port):
-    # Implement code to redirect the user to the authentication webpage
-    print("Open the following URL in a web browser to authenticate:")
-    print(f"{callback_url}?callbackPort={port}")
-
     # open a web browser
     webbrowser.open(f"{callback_url}?callbackPort={port}")
+
+    # Implement code to redirect the user to the authentication webpage
+    print("Open the following URL in a web browser to authenticate if it doesn't open automatically:")
+    print(f"{callback_url}?callbackPort={port}")
 
 def listen_for_token(port):
     # Start a server to listen for the token
     Handler = TokenHandler
     with socketserver.TCPServer(("", port), Handler) as httpd:
         # print("Server started on port", port)
-        httpd.handle_request()
-        httpd.handle_request()
+        while True:
+            httpd.handle_request()
+            if AUTH_TOKEN:
+                break
 
 
 def save_token(token):

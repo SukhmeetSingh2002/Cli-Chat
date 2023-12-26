@@ -30,7 +30,7 @@ def create_config():
     config["SocketIO"] = {
         # "connect_url": "https://clichat.azurewebsites.net",
         "connect_url": "https://xypher-server.onrender.com",
-        "wait_timeout": "10"
+        "wait_timeout": "45"
     }
 
     config["WebBrowser"] = {
@@ -39,8 +39,9 @@ def create_config():
 
 
     config["Update"] = {
+        "download_url": "https://xypher.vercel.app/download",
         "update_url": "https://xypher.vercel.app/api/version",
-        "current_version": "1.0.0"
+        "current_version": "1.3.0",
     }
 
 

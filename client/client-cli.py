@@ -14,6 +14,8 @@ from prompt_toolkit.completion import FuzzyWordCompleter
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.shortcuts import radiolist_dialog,yes_no_dialog
+from prompt_toolkit.shortcuts import input_dialog
 
 from rich.panel import Panel
 from rich.text import Text
@@ -469,7 +471,7 @@ def send_file(file_path, recipient):
     sio.emit("sendFile", {"to": recipient, "file": file_data, "from": username, "filename": path.basename(file_path), "content_type": content_type})
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='CLI Chat Client, a command line chat application')
+    parser = argparse.ArgumentParser(description='Xypher Client, a command line chat application')
     parser.add_argument('-s','--send-file', dest='file_path', type=str, help='Path to the file to send')
     parser.add_argument('-r','--recipient', dest='recipient', type=str, help='The recipient of the file')
     parser.add_argument('-g','--get-file', dest='file_list', action='store_true', help='Get the list of files')
@@ -477,6 +479,80 @@ if __name__ == '__main__':
     parser.add_argument('-c','--get-contacts', dest='get_contacts', action='store_true', help='Get the list of contacts')
     parser.add_argument('-u','--usernameFriend', dest='usernameFriend', type=str, help='The username of the user to get the file from')
     args = parser.parse_args()
+
+    from prompt_toolkit.styles import Style
+
+    xypher_style = Style.from_dict({
+        'dialog':             'bg:#fff3e0',
+        'dialog frame.label': 'bg:#eef6ff #424242',
+        'dialog.body':        'bg:#424242 #eef6ff',
+        'dialog shadow':      'bg:#ff9900',
+    })
+
+    if args.file_path is None and args.recipient is None and args.file_list is False and args.file_name is None and args.get_contacts is False:
+        result = radiolist_dialog(
+            title="Xypher",
+            text="What do you want to do?",
+            values=[
+                ("send_file", "Send file"),
+                ("get_file_list", "Get list of files received from a user"),
+                ("download_file", "Download file sent by a user"),
+                ("get_contacts", "Get contacts"),
+                ("main", "Continue to the main menu")
+            ],
+            style=xypher_style
+        ).run()
+
+
+        if result == "send_file":
+            args.file_path = input_dialog(
+                title="Xypher",
+                text="Enter the path to the file to send",
+                password=False,
+                style=xypher_style
+            ).run()
+
+            if args.file_path is None:
+                print("Cancelling sending file")
+                exit()
+
+        elif result == "get_file_list":
+            args.file_list = True
+
+        elif result == "download_file":
+            args.file_name = input_dialog(
+                title="Xypher",
+                text="Enter the name of the file to download",
+                password=False,
+                style=xypher_style
+            ).run()
+
+            if args.file_name is None:
+                print("Cancelling downloading file")
+                exit()
+
+            args.usernameFriend = input_dialog(
+                title="Xypher",
+                text="Enter the username of the user to download the file from",
+                password=False,
+                style=xypher_style
+            ).run()
+
+            if args.usernameFriend is None:
+                print("Cancelling downloading file")
+                exit()
+        
+        elif result == "get_contacts":
+            args.get_contacts = True
+
+        elif result == "main":
+            pass
+
+        else:
+            print("Invalid option")
+            exit()
+
+        
 
     print("Use the -h option for help")
 
@@ -502,7 +578,68 @@ if __name__ == '__main__':
         token_port.save_token({"stsTokenManager": ""})  # delete token
         exit()
 
-    if args.file_path is not None and args.recipient is not None:
+    if args.file_path is not None:
+
+
+        if args.recipient is not None:
+            # confirm before sending the file
+            result = yes_no_dialog(
+                title="Confirm",
+                text=f"Are you sure you want to send the file {args.file_path} to {args.recipient}?",
+                style=xypher_style
+            ).run()
+
+            if result is False:
+                console.print(f"Cancelling sending file [bold][red]{args.file_path}[/red][/bold]")
+                sio.disconnect()
+                exit()
+
+
+        else:
+            # get the list of contacts
+            sio.emit("getContacts", username)
+
+            # wait for the server to respond
+            while not isContactSet:
+                time.sleep(0.1)
+
+            # print the contacts
+            show_contacts(console, contacts)
+
+            input("Press enter to continue...")
+
+            input_username = input_dialog(
+                title=f"Sending file {args.file_path}", text="Enter the username of the recipient", password=False,
+                completer=FuzzyWordCompleter(
+                    [contact["username"] for contact in contacts.values()]),
+                style=xypher_style
+            ).run()
+            
+            if input_username is None:
+                console.print(f"Cancelling sending file [bold][red]{args.file_path}[/red][/bold]")
+                sio.disconnect()
+                exit()
+
+            if input_username not in [contact["username"] for contact in contacts.values()]:
+                console.print(f"[red]Error: [bold][blue]{input_username}[/bold][/blue] is not a valid contact[/red]")
+                sio.disconnect()
+                exit()
+
+            args.recipient = input_username
+
+
+
+            # find the username of the contact
+            for contact in contacts.values():
+                if contact["name"] == args.recipient:
+                    args.recipient = contact["username"]
+                    break
+
+
+        print("Sending file...")
+
+
+
         # send the file to the recipient
         send_file(args.file_path, args.recipient)
 
@@ -510,10 +647,6 @@ if __name__ == '__main__':
         while didServerRespond == UsernameState.UNSET:
             time.sleep(0.1)
 
-        sio.disconnect()
-        exit()
-    elif args.file_path is not None and args.recipient is None:
-        print("Error: recipient not specified")
         sio.disconnect()
         exit()
     elif args.file_path is None and args.recipient is not None:
